@@ -1,0 +1,43 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* гарантия, что уведомления сверху-справа */
+.mantine-Notifications-root {
+  top: 16px !important;
+  right: 16px !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 9999 !important;
+}
+@media (max-width: 768px) {
+  h1,
+  h2,
+  h3 {
+    font-size: 1.2rem;
+    line-height: 1.3;
+  }
+
+  .mantine-Container-root {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .exercise-item {
+    font-size: 0.9rem;
+  }
+}
+@media (max-width: 768px) {
+  .mantine-AppShell-main {
+    padding-top: 8px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .mantine-Card-root {
+    border-radius: 10px;
+  }
+}
