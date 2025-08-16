@@ -5,17 +5,29 @@
     <link rel="icon" type="image/svg+xml" href="/Training/goose.png" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
+
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Made by Gusak</title>
-    <script type="module" crossorigin src="/Training/assets/index-B1iYWLYU.js"></script>
-    <link rel="stylesheet" crossorigin href="/Training/assets/index-Billg_Ju.css">
+    <script>
+      (function () {
+        var isStandalone =
+          window.matchMedia("(display-mode: standalone)").matches ||
+          window.navigator.standalone === true;
+        var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        if (isStandalone && isIOS) {
+          document.documentElement.classList.add("ios-pwa");
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/Training/assets/index-A8w2YAVg.js"></script>
+    <link rel="stylesheet" crossorigin href="/Training/assets/index-CPKoUDME.css">
   <link rel="manifest" href="/Training/manifest.webmanifest"></head>
   <body>
     <div id="root"></div>
