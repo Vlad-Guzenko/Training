@@ -25,9 +25,9 @@ export default defineConfig({
         start_url: "/Training/", // важно: с префиксом base
         scope: "/Training/",     // важно: scope = base
         icons: [
-          { src: "/Training/pwa-192x192.png", sizes: "192x192", type: "image/png" },
-          { src: "/Training/pwa-512x512.png", sizes: "512x512", type: "image/png" },
-          { src: "/Training/pwa-maskable.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+          { src: "icons/app-icon192.png", sizes: "192x192", type: "image/png" },
+          { src: "icons/app-icon512.png", sizes: "512x512", type: "image/png" },
+          { src: "icons/app-icon180.png", sizes: "180x180", type: "image/png", purpose: "any maskable" }
         ]
       }
     }),
