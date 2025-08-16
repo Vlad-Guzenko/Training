@@ -27,35 +27,56 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const [opened, setOpened] = useState(false);
   const loc = useLocation();
+  const theme = useMantineTheme();
 
   // закрываем сайдбар при переходе
   React.useEffect(() => setOpened(false), [loc.pathname]);
 
-  // включаем ios-pwa класс только для PWA на iOS
+  // iOS PWA helper-класс
   useEffect(() => {
+    // только для iOS PWA
     const isStandalone =
       window.matchMedia?.("(display-mode: standalone)")?.matches ||
-      // старый способ для iOS
-      // @ts-ignore
-      !!navigator.standalone;
+      (navigator as any).standalone;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!(isStandalone && isIOS)) return;
 
-    const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent);
-    if (isStandalone && isIOS) {
-      document.documentElement.classList.add("ios-pwa");
-      return () => document.documentElement.classList.remove("ios-pwa");
-    }
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--app-vh", `${vh}px`);
+    };
+    setVH();
+    window.addEventListener("resize", setVH);
+    document.addEventListener("visibilitychange", setVH);
+    return () => {
+      window.removeEventListener("resize", setVH);
+      document.removeEventListener("visibilitychange", setVH);
+    };
   }, []);
 
-  const theme = useMantineTheme();
+  useEffect(() => {
+    // блокируем скролл фона, когда открыт navbar
+    document.documentElement.classList.toggle("lock-scroll", opened);
+    document.body.classList.toggle("lock-scroll", opened);
+    return () => {
+      document.documentElement.classList.remove("lock-scroll");
+      document.body.classList.remove("lock-scroll");
+    };
+  }, [opened]);
+
   const isActive = (path: string) =>
     path === "/" ? loc.pathname === "/" : loc.pathname.startsWith(path);
 
   const toggleColorScheme = () =>
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
 
+  const HEADER_H = 56;
+  const SAFE_TOP = "env(safe-area-inset-top, 0px)";
+  const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
+
   return (
     <AppShell
-      header={{ height: 56 }}
+      header={{ height: HEADER_H, offset: true }} // фикс-хедер
       navbar={{
         width: 260,
         breakpoint: "sm",
@@ -63,8 +84,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       }}
       padding="md"
     >
-      {/* HEADER */}
-      <AppShell.Header className="app-header" withBorder>
+      {/* HEADER (fixed AppShell-ом) */}
+      <AppShell.Header withBorder>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <Group gap="sm" wrap="nowrap">
             <Burger
@@ -105,9 +126,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </Group>
       </AppShell.Header>
 
-      {/* NAVBAR */}
+      {/* NAVBAR — свой скролл, высота ограничена экраном минус хедер и safe-top */}
       <AppShell.Navbar p="sm" withBorder>
-        <ScrollArea type="auto" style={{ height: "100%" }}>
+        <ScrollArea
+          type="auto"
+          style={{
+            // высота = реальная высота экрана (через --app-vh) минус safe-top и минус хедер
+            height: `calc((var(--app-vh, 1vh) * 100) - ${SAFE_TOP} - ${HEADER_H}px)`,
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+          }}
+        >
           <NavLink
             component={RouterLink}
             to="/"
@@ -151,11 +180,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </ScrollArea>
       </AppShell.Navbar>
 
-      {/* CONTENT */}
-      <AppShell.Main className="app-main">
-        <Box mih="100%" mx="auto">
-          {children}
-        </Box>
+      {/* MAIN — скролл только здесь; учитываем safe areas */}
+      <AppShell.Main
+        className="app-main"
+        style={{
+          paddingTop: `calc(${SAFE_TOP} + var(--mantine-spacing-md, 16px))`,
+          paddingBottom: `calc(${SAFE_BOTTOM} + var(--mantine-spacing-md, 16px))`,
+        }}
+      >
+        <Box mx="auto">{children}</Box>
       </AppShell.Main>
     </AppShell>
   );

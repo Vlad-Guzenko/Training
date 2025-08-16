@@ -136,3 +136,17 @@ html.ios-pwa .mantine-Notifications-root {
   bottom: auto !important;
   z-index: 9999 !important;
 }
+/* В iOS PWA фон не должен скроллиться под оверлеем */
+html.lock-scroll,
+body.lock-scroll {
+  position: fixed; /* фиксируем вьюпорт */
+  width: 100%;
+  overflow: hidden; /* отрезаем прокрутку страницы */
+  touch-action: none; /* запрещаем жесты на фоне */
+}
+
+/* Чтоб не было резкого прокидывания инерции вверх/вниз */
+.mantine-AppShell-navbar,
+.mantine-AppShell-main {
+  overscroll-behavior: contain;
+}
