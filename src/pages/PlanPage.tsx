@@ -11,37 +11,37 @@ import {
   Switch,
   Text,
   Textarea,
-  TextInput,
   Title,
-  NumberInput,
+  ActionIcon,
+  useMantineTheme,
 } from "@mantine/core";
 import {
   IconPlayerPlay,
   IconArrowDown,
   IconRefresh,
   IconCopy,
-  IconDownload,
-  IconArrowUp,
   IconTrash,
+  IconGripVertical,
 } from "@tabler/icons-react";
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
   closestCenter,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMediaQuery } from "@mantine/hooks";
-import { ActionIcon } from "@mantine/core";
-import { IconGripVertical } from "@tabler/icons-react";
+import React from "react";
 
 import { Exercise, PlanState } from "../types";
 import {
@@ -51,24 +51,88 @@ import {
   uid,
   volumeOf,
   clamp,
-  toInt,
 } from "../lib/workout";
 import { markLocalUpdated } from "../lib/useCloudSync";
 import { addSession, ensureDefaultWorkout } from "../lib/cloudNormalized";
 
+/* ---------- компактный счётчик – / + ---------- */
+function StatControl({
+  label,
+  value,
+  dec,
+  inc,
+  min = 1,
+  max = 999,
+}: {
+  label: string;
+  value: number;
+  dec: () => void;
+  inc: () => void;
+  min?: number;
+  max?: number;
+}) {
+  const canDec = value > min;
+  const canInc = value < max;
+
+  return (
+    <Stack gap={4} align="center" w={140} style={{ textAlign: "center" }}>
+      <Text size="xs" c="dimmed" style={{ letterSpacing: 0.2 }}>
+        {label}
+      </Text>
+      <Group
+        gap="xs"
+        wrap="nowrap"
+        align="center"
+        justify="center"
+        style={{ width: "100%" }}
+      >
+        <ActionIcon
+          size="sm"
+          variant="outline"
+          radius="sm"
+          onClick={dec}
+          disabled={!canDec}
+        >
+          −
+        </ActionIcon>
+        <Text
+          fw={800}
+          style={{
+            minWidth: 40,
+            textAlign: "center",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {value}
+        </Text>
+        <ActionIcon
+          size="sm"
+          variant="outline"
+          radius="sm"
+          onClick={inc}
+          disabled={!canInc}
+        >
+          +
+        </ActionIcon>
+      </Group>
+    </Stack>
+  );
+}
+
+/* ---------- карточка упражнения (единый PWA-стиль для всех экранов) ---------- */
 function SortableExercise({
   ex,
   idx,
   mutate,
-  move,
   remove,
 }: {
   ex: Exercise;
   idx: number;
   mutate: (id: string, patch: Partial<Exercise>) => void;
-  move: (idx: number, dir: -1 | 1) => void;
   remove: (id: string) => void;
 }) {
+  const theme = useMantineTheme();
+  const accent = theme.primaryColor;
   const {
     attributes,
     listeners,
@@ -77,83 +141,129 @@ function SortableExercise({
     transition,
     isDragging,
   } = useSortable({ id: ex.id });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.6 : 1,
-  };
+  const [notesOpen, setNotesOpen] = React.useState(false);
+  const hasNotes = Boolean(ex.notes && ex.notes.trim());
 
   return (
-    <Card ref={setNodeRef} style={style} withBorder padding="sm" radius="md">
-      <Group align="flex-start" wrap="wrap">
-        <Badge variant="light" size="lg" radius="sm" miw={28} ta="center">
-          {idx + 1}
-        </Badge>
+    <Card
+      ref={setNodeRef}
+      withBorder
+      radius="md"
+      shadow={isDragging ? "md" : "xs"}
+      p="sm"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 2 : 1,
+      }}
+    >
+      {/* верх: номер + название + ручка DnD справа */}
+      <Group justify="space-between" align="center" wrap="nowrap" mb={8}>
+        <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
+          <Badge variant="light" size="sm" radius="sm" miw={22} ta="center">
+            {idx + 1}
+          </Badge>
+          <Text
+            fw={700}
+            size="sm"
+            truncate
+            style={{
+              flex: 1,
+              minWidth: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {ex.name}
+          </Text>
+        </Group>
 
-        <TextInput
-          flex={1}
-          w={{ base: "100%", sm: "auto" }}
-          label="Название"
-          value={ex.name}
-          onChange={(e) => mutate(ex.id, { name: e.currentTarget.value })}
-        />
+        <ActionIcon
+          variant="subtle"
+          className="dnd-handle"
+          size="lg"
+          radius="md"
+          style={{
+            touchAction: "none",
+            WebkitUserSelect: "none",
+            userSelect: "none",
+          }}
+          title="Перетащить"
+          {...attributes}
+          {...listeners}
+        >
+          <IconGripVertical size={22} stroke={1.8} />
+        </ActionIcon>
+      </Group>
 
-        <NumberInput
-          label="Подходы"
-          value={ex.sets}
-          min={1}
-          max={20}
-          step={1}
-          clampBehavior="strict"
-          onChange={(v) => mutate(ex.id, { sets: clamp(toInt(v, 1), 1, 20) })}
-          maw={120}
-          w={{ base: "48%", sm: 120 }}
-        />
-
-        <NumberInput
+      {/* средняя строка: два счётчика */}
+      <Group
+        gap="sm"
+        wrap="nowrap"
+        justify="space-between"
+        mb={8}
+        style={{ width: "100%" }}
+      >
+        <StatControl
           label="Повт."
           value={ex.reps}
-          min={1}
+          dec={() => mutate(ex.id, { reps: clamp((ex.reps || 1) - 1, 1, 500) })}
+          inc={() => mutate(ex.id, { reps: clamp((ex.reps || 1) + 1, 1, 500) })}
           max={500}
-          step={1}
-          clampBehavior="strict"
-          onChange={(v) => mutate(ex.id, { reps: clamp(toInt(v, 1), 1, 500) })}
-          maw={120}
-          w={{ base: "48%", sm: 120 }}
         />
+        <StatControl
+          label="Подходы"
+          value={ex.sets}
+          dec={() => mutate(ex.id, { sets: clamp((ex.sets || 1) - 1, 1, 20) })}
+          inc={() => mutate(ex.id, { sets: clamp((ex.sets || 1) + 1, 1, 20) })}
+          max={20}
+        />
+        <div style={{ flex: 1 }} />
+      </Group>
 
+      {/* нижняя строка: Заметки слева (с индикатором) + Корзина справа */}
+      <Group justify="space-between" mb={notesOpen ? 8 : 0}>
+        <Group gap="xs" align="center">
+          <Button
+            variant="subtle"
+            size="compact-sm"
+            onClick={() => setNotesOpen((v) => !v)}
+          >
+            {notesOpen ? "Скрыть заметки" : "Заметки"}
+          </Button>
+
+          {hasNotes && (
+            <span
+              className="note-indicator"
+              style={{
+                backgroundColor: theme.colors[theme.primaryColor][6],
+              }}
+            />
+          )}
+        </Group>
+
+        <ActionIcon
+          color="red"
+          variant="subtle"
+          title="Удалить"
+          onClick={() => remove(ex.id)}
+        >
+          <IconTrash size={18} />
+        </ActionIcon>
+      </Group>
+
+      {notesOpen && (
         <Textarea
-          label="Заметки"
-          flex={1}
-          w={{ base: "100%", sm: "auto" }}
+          size="sm"
           autosize
           minRows={1}
+          maxRows={3}
+          placeholder="Добавить заметку…"
           value={ex.notes || ""}
           onChange={(e) => mutate(ex.id, { notes: e.currentTarget.value })}
         />
-
-        <Group gap="xs" ml="auto" w={{ base: "100%", sm: "auto" }}>
-          <ActionIcon
-            variant="subtle"
-            title="Перетащить"
-            {...attributes}
-            {...listeners}
-            w={{ base: 32, sm: "auto" }}
-          >
-            <IconGripVertical size={18} />
-          </ActionIcon>
-          <Button variant="subtle" onClick={() => move(idx, -1)}>
-            <IconArrowUp size={18} />
-          </Button>
-          <Button variant="subtle" onClick={() => move(idx, 1)}>
-            <IconArrowDown size={18} />
-          </Button>
-          <Button variant="subtle" color="red" onClick={() => remove(ex.id)}>
-            <IconTrash size={18} />
-          </Button>
-        </Group>
-      </Group>
+      )}
     </Card>
   );
 }
@@ -172,6 +282,7 @@ export default function PlanPage({
   );
 
   const isSmall = useMediaQuery("(max-width: 48em)"); // ~768px
+  const isDesktop = useMediaQuery("(min-width: 62em)"); // для модификаторов DnD
 
   const bumpSession = (d: number) =>
     setState((s) => ({
@@ -319,9 +430,12 @@ export default function PlanPage({
     alert(ok ? "План скопирован" : "Буфер недоступен — скачан .txt");
   };
 
-  // DnD
+  // DnD: Pointer + Touch (для PWA). На мобиле ограничиваем ось Y, на ПК без ограничений.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 120, tolerance: 6 },
+    })
   );
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -382,9 +496,7 @@ export default function PlanPage({
               </Text>
               <Switch
                 checked={state.gentle}
-                onChange={(e) =>
-                  setState((s) => ({ ...s, gentle: e.currentTarget.checked }))
-                }
+                onChange={() => setState((s) => ({ ...s, gentle: !s.gentle }))}
               />
             </Group>
           </Grid.Col>
@@ -421,13 +533,6 @@ export default function PlanPage({
           >
             Скопировать
           </Button>
-          {/* <Button
-            variant="subtle"
-            leftSection={<IconDownload size={16} />}
-            onClick={exportTxt}
-          >
-            Скачать .txt
-          </Button> */}
           <Button variant="light" onClick={() => addExercise()}>
             + Упражнение
           </Button>
@@ -441,29 +546,33 @@ export default function PlanPage({
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          modifiers={isDesktop ? [] : [restrictToVerticalAxis]}
           onDragEnd={onDragEnd}
         >
           <SortableContext
             items={state.exercises.map((e) => e.id)}
-            strategy={verticalListSortingStrategy}
+            strategy={rectSortingStrategy}
           >
-            <Stack gap="sm">
+            {/* 2 карточки в ряд на десктопе, 1 на мобиле. Внутри — PWA-верстка */}
+            <Grid gutter="md" align="stretch">
               {state.exercises.length === 0 && (
-                <Text size="sm" c="dimmed">
-                  Добавь упражнения на вкладке «Упражнения» слева.
-                </Text>
+                <Grid.Col span={12}>
+                  <Text size="sm" c="dimmed">
+                    Добавь упражнения на вкладке «Упражнения» слева.
+                  </Text>
+                </Grid.Col>
               )}
               {state.exercises.map((ex, idx) => (
-                <SortableExercise
-                  key={ex.id}
-                  ex={ex}
-                  idx={idx}
-                  mutate={mutateExercise}
-                  move={moveExercise}
-                  remove={removeExercise}
-                />
+                <Grid.Col key={ex.id} span={{ base: 12, md: 6 }}>
+                  <SortableExercise
+                    ex={ex}
+                    idx={idx}
+                    mutate={mutateExercise}
+                    remove={removeExercise}
+                  />
+                </Grid.Col>
               ))}
-            </Stack>
+            </Grid>
           </SortableContext>
         </DndContext>
       </Card>

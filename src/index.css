@@ -150,3 +150,45 @@ body.lock-scroll {
 .mantine-AppShell-main {
   overscroll-behavior: contain;
 }
+.dnd-handle {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+html,
+body {
+  overscroll-behavior: contain;
+}
+/* index.css */
+.dnd-handle {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+html,
+body {
+  overscroll-behavior: contain;
+}
+
+.note-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--mantine-color-pink-filled); /* твой акцент */
+
+  animation: pulse 0.75s infinite ease-in-out;
+}
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.8);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+}
