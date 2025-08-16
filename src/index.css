@@ -6,7 +6,7 @@ body,
   padding: 0;
 }
 
-/* гарантия, что уведомления сверху-справа */
+/* уведомления по-умолчанию (в браузере) */
 .mantine-Notifications-root {
   top: 16px !important;
   right: 16px !important;
@@ -14,6 +14,7 @@ body,
   left: auto !important;
   z-index: 9999 !important;
 }
+
 @media (max-width: 768px) {
   h1,
   h2,
@@ -31,6 +32,7 @@ body,
     font-size: 0.9rem;
   }
 }
+
 @media (max-width: 768px) {
   .mantine-AppShell-main {
     padding-top: 8px !important;
@@ -42,7 +44,7 @@ body,
   }
 }
 
-/* ==== Safe areas for iOS PWA ==== */
+/* ==== переменные safe-area ==== */
 :root {
   --sat: env(safe-area-inset-top);
   --sab: env(safe-area-inset-bottom);
@@ -50,22 +52,12 @@ body,
   --sar: env(safe-area-inset-right);
 }
 
-/* На всякий случай: чтобы низ контента не попадал под хом-индикатор */
+/* нижний отступ, чтобы контент не попадал под home-indicator (для всех) */
 body {
   padding-bottom: var(--sab);
 }
 
-/* Утилитные классы (можно навесить на header/main) */
-
-.safe-bottom {
-  padding-bottom: var(--sab);
-}
-.safe-x {
-  padding-left: var(--sal);
-  padding-right: var(--sar);
-}
-
-/* Старые iOS (fallback): */
+/* fallback для старых iOS */
 @supports (padding: constant(safe-area-inset-top)) {
   :root {
     --sat: constant(safe-area-inset-top);
@@ -75,73 +67,72 @@ body {
   }
 }
 
-/* Чтобы заголовки не клипались из-за субпиксельного округления */
+/* заголовки без клиппинга */
 .mantine-Title-root {
-  line-height: 1.25 !important; /* было ~1.1–1.2 — добавляем воздуха */
-  padding-block: 2px !important; /* добавляем 2px сверху/снизу */
+  line-height: 1.25 !important;
+  padding-block: 2px !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Безопасные зоны для PWA с вырезами/жестовой панелью */
-:root {
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* В средах с вырезом экрана (iOS) добавим safe area */
-@supports (padding-top: env(safe-area-inset-top)) {
-  .app-main {
-    padding-top: calc(
-      env(safe-area-inset-top) + var(--mantine-app-shell-header-height, 60px) +
-        var(--mantine-spacing-md)
-    ) !important;
-  }
-}
-
-.app-header {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-/* --- iOS PWA safe-area helpers --- */
-:root {
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* фон хедера, чтобы совпадал с зоной safe-area */
+/* фон хедера совпадает с body */
 .app-header {
   background: var(--mantine-color-body);
 }
 
-/* --- только для установленного PWA на iOS --- */
-html.ios-pwa {
-  /* подкрашиваем фон, чтобы сверху не было просветов */
-  background: var(--mantine-color-body);
-}
+/* ============================= */
+/*   ТОЛЬКО ДЛЯ iOS в PWA        */
+/* ============================= */
 
-/* сдвигаем ВСЮ страницу вниз на пару пикселей + учитываем safe area */
-html.ios-pwa body {
-  /* базовый сдвиг – подбери под свой вкус: 6–10px обычно достаточно */
-  --pwa-extra-offset: 8px;
-
-  /* env(safe-area-inset-top) уже есть, добавим наш небольшой отступ */
-}
-
-/* на всякий случай анти-артефакты композитинга */
-html.ios-pwa body,
-html.ios-pwa .app-header {
-  transform: translateZ(0);
-  -webkit-font-smoothing: antialiased;
-  -webkit-backface-visibility: hidden;
-}
-
-/* фоновый цвет, чтобы не было «просветов» */
 html.ios-pwa,
 html.ios-pwa body {
   background: var(--mantine-color-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
-/* Сдвигаем sticky-хедер вниз и чуть добавляем места контенту */
+/* 1) Сдвигаем весь интерфейс вниз на высоту статус-бара:
+      задаём offset для sticky-хедера */
 html.ios-pwa .mantine-AppShell-header {
-  top: 10px; /* <-- подстрой: 6–12px обычно идеально */
+  top: env(safe-area-inset-top) !important; /* <- ключевая строка */
+  z-index: 1000 !important;
+}
+
+/* 2) Контент подстраиваем: паддинг сверху = высота хедера */
+/* Обычный браузер (мобильный/ПК) */
+.mantine-AppShell-main {
+  padding-top: calc(
+    var(--mantine-app-shell-header-height, 56px) +
+      var(--mantine-spacing-md, 16px)
+  ) !important;
+}
+
+/* PWA на iOS */
+html.ios-pwa .mantine-AppShell-main {
+  padding-top: calc(
+    env(safe-area-inset-top, 0px) + var(--mantine-app-shell-header-height, 56px) +
+      var(--mantine-spacing-md, 16px)
+  ) !important;
+
+  padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+}
+
+/* 3) Мобильный navbar (overlay) стартует ниже статус-бара и хедера */
+html.ios-pwa .mantine-AppShell-navbar {
+  /* top + высота хедера */
+  top: calc(
+    env(safe-area-inset-top) + var(--mantine-app-shell-header-height, 56px)
+  ) !important;
+  /* чтобы не упирался в home-indicator */
+  padding-bottom: env(safe-area-inset-bottom) !important;
+}
+
+/* 4) Уведомления — ниже статус-бара и с учётом правой safe-area */
+html.ios-pwa .mantine-Notifications-root {
+  top: calc(env(safe-area-inset-top) + 8px) !important;
+  right: calc(env(safe-area-inset-right) + 16px) !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 9999 !important;
 }

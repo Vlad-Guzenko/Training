@@ -39,12 +39,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       // @ts-ignore
       !!navigator.standalone;
 
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent);
     if (isStandalone && isIOS) {
       document.documentElement.classList.add("ios-pwa");
       return () => document.documentElement.classList.remove("ios-pwa");
     }
   }, []);
+
   const theme = useMantineTheme();
   const isActive = (path: string) =>
     path === "/" ? loc.pathname === "/" : loc.pathname.startsWith(path);
@@ -63,10 +64,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       padding="md"
     >
       {/* HEADER */}
-      <AppShell.Header className="app-header">
-        {/* узкая накладка для safe-area сверху */}
-        <div className="pwa-top-safe" />
-
+      <AppShell.Header className="app-header" withBorder>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <Group gap="sm" wrap="nowrap">
             <Burger
