@@ -1,14 +1,17 @@
+// src/App.tsx
 import Layout from "./Layout";
 import { Container } from "@mantine/core";
 import { Routes, Route } from "react-router-dom";
 import PlanPage from "./pages/PlanPage";
-import ExercisesPage from "./pages/ExercisesPage"; // проверь имя файла
+import ExercisesPage from "./pages/ExercisesPage";
 import HistoryPage from "./pages/HistoryPage";
 import TimerPage from "./pages/TimerPage";
 import SettingsPage from "./pages/SettingsPage";
 import { useEffect, useState } from "react";
 import { PlanState } from "./types";
 import { loadState, saveState } from "./lib/workout";
+import { useCloudSync } from "./lib/useCloudSync";
+import { usePrefsSync } from "./lib/usePrefsSync";
 
 export default function App() {
   const saved = loadState();
@@ -27,6 +30,7 @@ export default function App() {
       }
   );
 
+  // локальная персистенция
   useEffect(() => {
     saveState(state);
   }, [state]);
@@ -46,15 +50,32 @@ export default function App() {
     return () => clearInterval(id);
   }, [state.restRunning]);
 
+  // 🔗 синк данных
+  useCloudSync(state, setState, true, 3000);
+  // 🎨 синк оформления
+  usePrefsSync();
+
   return (
     <Layout>
-      <Container fluid px={{ base: "xs", sm: "md" }}>
+      <Container size="lg">
         <Routes>
-          <Route path="/" element={<PlanPage state={state} setState={setState} />} />
-          <Route path="/exercises" element={<ExercisesPage state={state} setState={setState} />} />
+          <Route
+            path="/"
+            element={<PlanPage state={state} setState={setState} />}
+          />
+          <Route
+            path="/exercises"
+            element={<ExercisesPage state={state} setState={setState} />}
+          />
           <Route path="/history" element={<HistoryPage state={state} />} />
-          <Route path="/timer" element={<TimerPage state={state} setState={setState} />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route
+            path="/timer"
+            element={<TimerPage state={state} setState={setState} />}
+          />
+          <Route
+            path="/settings"
+            element={<SettingsPage state={state} setState={setState} />}
+          />
         </Routes>
       </Container>
     </Layout>

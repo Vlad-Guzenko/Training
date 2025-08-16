@@ -41,3 +41,107 @@ body,
     border-radius: 10px;
   }
 }
+
+/* ==== Safe areas for iOS PWA ==== */
+:root {
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-right);
+}
+
+/* На всякий случай: чтобы низ контента не попадал под хом-индикатор */
+body {
+  padding-bottom: var(--sab);
+}
+
+/* Утилитные классы (можно навесить на header/main) */
+
+.safe-bottom {
+  padding-bottom: var(--sab);
+}
+.safe-x {
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+}
+
+/* Старые iOS (fallback): */
+@supports (padding: constant(safe-area-inset-top)) {
+  :root {
+    --sat: constant(safe-area-inset-top);
+    --sab: constant(safe-area-inset-bottom);
+    --sal: constant(safe-area-inset-left);
+    --sar: constant(safe-area-inset-right);
+  }
+}
+
+/* Чтобы заголовки не клипались из-за субпиксельного округления */
+.mantine-Title-root {
+  line-height: 1.25 !important; /* было ~1.1–1.2 — добавляем воздуха */
+  padding-block: 2px !important; /* добавляем 2px сверху/снизу */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Безопасные зоны для PWA с вырезами/жестовой панелью */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* В средах с вырезом экрана (iOS) добавим safe area */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .app-main {
+    padding-top: calc(
+      env(safe-area-inset-top) + var(--mantine-app-shell-header-height, 60px) +
+        var(--mantine-spacing-md)
+    ) !important;
+  }
+}
+
+.app-header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+/* --- iOS PWA safe-area helpers --- */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* фон хедера, чтобы совпадал с зоной safe-area */
+.app-header {
+  background: var(--mantine-color-body);
+}
+
+/* --- только для установленного PWA на iOS --- */
+html.ios-pwa {
+  /* подкрашиваем фон, чтобы сверху не было просветов */
+  background: var(--mantine-color-body);
+}
+
+/* сдвигаем ВСЮ страницу вниз на пару пикселей + учитываем safe area */
+html.ios-pwa body {
+  /* базовый сдвиг – подбери под свой вкус: 6–10px обычно достаточно */
+  --pwa-extra-offset: 8px;
+
+  /* env(safe-area-inset-top) уже есть, добавим наш небольшой отступ */
+}
+
+/* на всякий случай анти-артефакты композитинга */
+html.ios-pwa body,
+html.ios-pwa .app-header {
+  transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
+  -webkit-backface-visibility: hidden;
+}
+
+/* фоновый цвет, чтобы не было «просветов» */
+html.ios-pwa,
+html.ios-pwa body {
+  background: var(--mantine-color-body);
+}
+
+/* Сдвигаем sticky-хедер вниз и чуть добавляем места контенту */
+html.ios-pwa .mantine-AppShell-header {
+  top: 10px; /* <-- подстрой: 6–12px обычно идеально */
+}

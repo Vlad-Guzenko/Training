@@ -3,8 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/goose.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Made by Gusak</title>
+    <script>
+      (function () {
+        var isStandalone =
+          window.matchMedia("(display-mode: standalone)").matches ||
+          window.navigator.standalone === true;
+        var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        if (isStandalone && isIOS) {
+          document.documentElement.classList.add("ios-pwa");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

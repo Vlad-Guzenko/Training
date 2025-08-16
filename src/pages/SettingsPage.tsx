@@ -1,14 +1,50 @@
-import { useRef, useState } from "react";
-import { Button, Card, Group, Stack, Title, Text, Divider, ActionIcon, Badge, FileInput } from "@mantine/core";
+import { useEffect, useRef, useState } from "react";
+import {
+  Button,
+  Card,
+  Group,
+  Stack,
+  Title,
+  Text,
+  Divider,
+  ActionIcon,
+  Badge,
+  FileInput,
+} from "@mantine/core";
 import { useMantineColorScheme } from "@mantine/core";
-import { IconSun, IconMoonStars, IconDownload, IconUpload, IconTrash, IconBell, IconClipboard } from "@tabler/icons-react";
+import {
+  IconSun,
+  IconMoonStars,
+  IconDownload,
+  IconUpload,
+  IconTrash,
+  IconBell,
+  IconClipboard,
+} from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { LS_KEY } from "../lib/workout";
 import { ColorSwatch, SimpleGrid } from "@mantine/core";
 import { usePrimaryColor } from "../lib/usePrimaryColor";
 import { useMantineTheme } from "@mantine/core";
 
-export default function SettingsPage() {
+import { Avatar } from "@mantine/core";
+import {
+  IconBrandGoogle,
+  IconLogout,
+  IconCloudUp,
+  IconCloudDown,
+} from "@tabler/icons-react";
+import { cloudLoad, cloudSave } from "../lib/cloud";
+import type { PlanState } from "../types";
+import { onAuth, signInWithGoogle, signOutGoogle } from "../lib/firebase";
+
+export default function SettingsPage({
+  state,
+  setState,
+}: {
+  state: PlanState;
+  setState: React.Dispatch<React.SetStateAction<PlanState>>;
+}) {
   const theme = useMantineTheme();
   const [primary, setPrimary] = usePrimaryColor();
 
@@ -16,7 +52,56 @@ export default function SettingsPage() {
   const fileRef = useRef<File | null>(null);
   const [size, setSize] = useState(() => roughStorageSize());
 
-  const toggleScheme = () => setColorScheme(colorScheme === "dark" ? "light" : "dark");
+  const [user, setUser] = useState<import("firebase/auth").User | null>(null);
+  useEffect(() => onAuth(setUser), []);
+
+  const toggleScheme = () =>
+    setColorScheme(colorScheme === "dark" ? "light" : "dark");
+
+  const saveCloud = async () => {
+    try {
+      await cloudSave(state);
+      notifications.show({
+        title: "Сохранено",
+        message: "Данные обновлены в облаке",
+        color: "teal",
+      });
+    } catch (e: any) {
+      notifications.show({
+        title: "Ошибка",
+        message: e?.message || "Войдите в аккаунт",
+        color: "red",
+      });
+    }
+  };
+
+  const loadCloud = async () => {
+    try {
+      const data = await cloudLoad();
+      if (data) {
+        setState(data);
+        localStorage.setItem(LS_KEY, JSON.stringify(data));
+        setSize(roughStorageSize());
+        notifications.show({
+          title: "Загружено",
+          message: "Данные подтянуты из облака",
+          color: "teal",
+        });
+      } else {
+        notifications.show({
+          title: "Пусто",
+          message: "В облаке пока нет данных",
+          color: "yellow",
+        });
+      }
+    } catch (e: any) {
+      notifications.show({
+        title: "Ошибка",
+        message: e?.message || "Войдите в аккаунт",
+        color: "red",
+      });
+    }
+  };
 
   function roughStorageSize() {
     try {
@@ -115,8 +200,8 @@ export default function SettingsPage() {
     notifications.show({
       title: "Пример уведомления",
       message: "Так оно будет выглядеть в интерфейсе",
-      color: "indigo",
-      autoClose: 2000,
+      color: theme.colors[theme.primaryColor][6],
+      autoClose: 1500,
     });
 
   return (
@@ -127,6 +212,56 @@ export default function SettingsPage() {
 
       <Stack gap="md">
         {/* Тема */}
+        <Card withBorder shadow="sm" radius="md">
+          <Group justify="space-between" align="center">
+            <Group>
+              <Avatar src={user?.photoURL ?? undefined} radius="xl" />
+              <div>
+                <Text fw={600}>Аккаунт</Text>
+                <Text size="sm" c="dimmed">
+                  {user
+                    ? user.email || user.displayName
+                    : "Войдите, чтобы синхронизировать данные"}
+                </Text>
+              </div>
+            </Group>
+            {user ? (
+              <Button
+                leftSection={<IconLogout size={16} />}
+                variant="default"
+                onClick={signOutGoogle}
+              >
+                Выйти
+              </Button>
+            ) : (
+              <Button
+                leftSection={<IconBrandGoogle size={16} />}
+                onClick={signInWithGoogle}
+              >
+                Войти через Google
+              </Button>
+            )}
+          </Group>
+
+          <Divider my="sm" />
+          <Group wrap="wrap" gap="sm">
+            <Button
+              leftSection={<IconCloudUp size={16} />}
+              onClick={saveCloud}
+              disabled={!user}
+            >
+              Сохранить в облако
+            </Button>
+            <Button
+              leftSection={<IconCloudDown size={16} />}
+              onClick={loadCloud}
+              variant="default"
+              disabled={!user}
+            >
+              Загрузить из облака
+            </Button>
+          </Group>
+        </Card>
         <Card withBorder shadow="sm" radius="md">
           <Text fw={600} mb="xs">
             Акцентный цвет
@@ -146,7 +281,10 @@ export default function SettingsPage() {
                 }}
                 style={{
                   cursor: "pointer",
-                  border: primary === color ? "2px solid var(--mantine-color-text)" : "none",
+                  border:
+                    primary === color
+                      ? "2px solid var(--mantine-color-text)"
+                      : "none",
                 }}
               />
             ))}
@@ -160,8 +298,18 @@ export default function SettingsPage() {
                 Переключение светлой / тёмной темы
               </Text>
             </div>
-            <ActionIcon variant="default" size="lg" radius="xl" onClick={toggleScheme} title="Сменить тему">
-              {colorScheme === "dark" ? <IconSun size={18} /> : <IconMoonStars size={18} />}
+            <ActionIcon
+              variant="default"
+              size="lg"
+              radius="xl"
+              onClick={toggleScheme}
+              title="Сменить тему"
+            >
+              {colorScheme === "dark" ? (
+                <IconSun size={18} />
+              ) : (
+                <IconMoonStars size={18} />
+              )}
             </ActionIcon>
           </Group>
         </Card>
@@ -175,7 +323,10 @@ export default function SettingsPage() {
                 Проверить, где и как появляются уведомления
               </Text>
             </div>
-            <Button leftSection={<IconBell size={16} />} onClick={testNotification}>
+            <Button
+              leftSection={<IconBell size={16} />}
+              onClick={testNotification}
+            >
               Тест уведомления
             </Button>
           </Group>
@@ -187,7 +338,11 @@ export default function SettingsPage() {
             Данные
           </Text>
           <Group gap="sm" wrap="wrap">
-            <Button variant="light" leftSection={<IconDownload size={16} />} onClick={handleExport}>
+            <Button
+              variant="light"
+              leftSection={<IconDownload size={16} />}
+              onClick={handleExport}
+            >
               Экспорт JSON
             </Button>
             <FileInput
@@ -198,10 +353,19 @@ export default function SettingsPage() {
               value={fileRef.current ? (fileRef.current as any) : null}
               clearable
             />
-            <Button color="red" variant="light" leftSection={<IconTrash size={16} />} onClick={handleClear}>
+            <Button
+              color="red"
+              variant="light"
+              leftSection={<IconTrash size={16} />}
+              onClick={handleClear}
+            >
               Очистить данные
             </Button>
-            <Button variant="default" leftSection={<IconClipboard size={16} />} onClick={handleCopyState}>
+            <Button
+              variant="default"
+              leftSection={<IconClipboard size={16} />}
+              onClick={handleCopyState}
+            >
               Копировать в буфер
             </Button>
           </Group>
@@ -219,7 +383,8 @@ export default function SettingsPage() {
         <Card withBorder shadow="sm" radius="md">
           <Text fw={600}>О приложении</Text>
           <Text c="dimmed" size="sm">
-            Всё работает локально, данные сохраняются в вашем браузере (localStorage).
+            Всё работает локально, данные сохраняются в вашем браузере
+            (localStorage).
           </Text>
         </Card>
       </Stack>

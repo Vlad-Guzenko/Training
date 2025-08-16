@@ -1,15 +1,60 @@
 import { useMemo } from "react";
-import { Badge, Button, Card, Divider, Grid, Group, Slider, Stack, Switch, Text, Textarea, TextInput, Title, NumberInput } from "@mantine/core";
-import { IconPlayerPlay, IconArrowDown, IconRefresh, IconCopy, IconDownload, IconArrowUp, IconTrash } from "@tabler/icons-react";
-import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent, closestCenter } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import {
+  Badge,
+  Button,
+  Card,
+  Divider,
+  Grid,
+  Group,
+  Slider,
+  Stack,
+  Switch,
+  Text,
+  Textarea,
+  TextInput,
+  Title,
+  NumberInput,
+} from "@mantine/core";
+import {
+  IconPlayerPlay,
+  IconArrowDown,
+  IconRefresh,
+  IconCopy,
+  IconDownload,
+  IconArrowUp,
+  IconTrash,
+} from "@tabler/icons-react";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  closestCenter,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMediaQuery } from "@mantine/hooks";
 import { ActionIcon } from "@mantine/core";
 import { IconGripVertical } from "@tabler/icons-react";
 
 import { Exercise, PlanState } from "../types";
-import { applyProgression, buildPlanText, safeCopyText, uid, volumeOf, clamp, toInt } from "../lib/workout";
+import {
+  applyProgression,
+  buildPlanText,
+  safeCopyText,
+  uid,
+  volumeOf,
+  clamp,
+  toInt,
+} from "../lib/workout";
+import { markLocalUpdated } from "../lib/useCloudSync";
+import { addSession, ensureDefaultWorkout } from "../lib/cloudNormalized";
 
 function SortableExercise({
   ex,
@@ -24,7 +69,14 @@ function SortableExercise({
   move: (idx: number, dir: -1 | 1) => void;
   remove: (id: string) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: ex.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: ex.id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -82,7 +134,13 @@ function SortableExercise({
         />
 
         <Group gap="xs" ml="auto" w={{ base: "100%", sm: "auto" }}>
-          <ActionIcon variant="subtle" title="Перетащить" {...attributes} {...listeners} w={{ base: 32, sm: "auto" }}>
+          <ActionIcon
+            variant="subtle"
+            title="Перетащить"
+            {...attributes}
+            {...listeners}
+            w={{ base: 32, sm: "auto" }}
+          >
             <IconGripVertical size={18} />
           </ActionIcon>
           <Button variant="subtle" onClick={() => move(idx, -1)}>
@@ -101,12 +159,25 @@ function SortableExercise({
 }
 
 /* ---------------------------- Страница ---------------------------- */
-export default function PlanPage({ state, setState }: { state: PlanState; setState: React.Dispatch<React.SetStateAction<PlanState>> }) {
-  const totalVolume = useMemo(() => volumeOf(state.exercises), [state.exercises]);
+export default function PlanPage({
+  state,
+  setState,
+}: {
+  state: PlanState;
+  setState: React.Dispatch<React.SetStateAction<PlanState>>;
+}) {
+  const totalVolume = useMemo(
+    () => volumeOf(state.exercises),
+    [state.exercises]
+  );
 
   const isSmall = useMediaQuery("(max-width: 48em)"); // ~768px
 
-  const bumpSession = (d: number) => setState((s) => ({ ...s, sessionNumber: Math.max(1, s.sessionNumber + d) }));
+  const bumpSession = (d: number) =>
+    setState((s) => ({
+      ...s,
+      sessionNumber: Math.max(1, s.sessionNumber + d),
+    }));
 
   const mutateExercise = (id: string, patch: Partial<Exercise>) =>
     setState((s) => ({
@@ -117,10 +188,17 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
   const addExercise = (it: Partial<Exercise> = {}) =>
     setState((s) => ({
       ...s,
-      exercises: [...s.exercises, { id: uid(), name: "Новое упражнение", sets: 3, reps: 10, ...it }],
+      exercises: [
+        ...s.exercises,
+        { id: uid(), name: "Новое упражнение", sets: 3, reps: 10, ...it },
+      ],
     }));
 
-  const removeExercise = (id: string) => setState((s) => ({ ...s, exercises: s.exercises.filter((e) => e.id !== id) }));
+  const removeExercise = (id: string) =>
+    setState((s) => ({
+      ...s,
+      exercises: s.exercises.filter((e) => e.id !== id),
+    }));
 
   const moveExercise = (idx: number, dir: -1 | 1) =>
     setState((s) => {
@@ -138,30 +216,59 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
     return 0;
   }
 
-  const onDone = () => {
-    const history = [
-      ...state.history,
-      {
-        sessionNumber: state.sessionNumber,
-        date: new Date().toISOString(),
-        volume: totalVolume,
-        rpe: state.rpeToday,
-      },
-    ];
+  const onDone = async () => {
+    const sessionForHistory = {
+      sessionNumber: state.sessionNumber,
+      date: new Date().toISOString(),
+      volume: state.exercises.reduce((sum, e) => sum + e.sets * e.reps, 0),
+      rpe: state.rpeToday,
+    };
+
     const nextPct = adaptProgressByRpe(state.rpeToday);
+
     setState((s) => ({
       ...s,
-      history,
+      history: [...s.history, sessionForHistory],
       sessionNumber: s.sessionNumber + 1,
       progressPct: nextPct,
       exercises: s.exercises.map((e) => ({
         ...e,
         reps:
           state.rpeToday === 10
-            ? applyProgression(e.reps, Math.max(10, s.progressPct), s.gentle, false)
-            : applyProgression(e.reps, nextPct || s.progressPct, s.gentle, true),
+            ? applyProgression(
+                e.reps,
+                Math.max(10, s.progressPct),
+                s.gentle,
+                false
+              )
+            : applyProgression(
+                e.reps,
+                nextPct || s.progressPct,
+                s.gentle,
+                true
+              ),
       })),
     }));
+
+    markLocalUpdated();
+
+    try {
+      const wid = await ensureDefaultWorkout();
+      await addSession(wid, {
+        sessionNumber: sessionForHistory.sessionNumber,
+        rpe: sessionForHistory.rpe,
+        volume: sessionForHistory.volume,
+        date: new Date(sessionForHistory.date),
+        exercises: state.exercises.map((e) => ({
+          name: e.name,
+          sets: e.sets,
+          reps: e.reps,
+          notes: e.notes,
+        })),
+      });
+    } catch (e) {
+      console.warn("cloud addSession error", e);
+    }
   };
 
   const onTooHard = () =>
@@ -169,7 +276,12 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
       ...s,
       exercises: s.exercises.map((e) => ({
         ...e,
-        reps: applyProgression(e.reps, Math.max(10, s.progressPct), s.gentle, false),
+        reps: applyProgression(
+          e.reps,
+          Math.max(10, s.progressPct),
+          s.gentle,
+          false
+        ),
       })),
     }));
 
@@ -200,12 +312,17 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
   };
 
   const copyToday = async () => {
-    const ok = await safeCopyText(buildPlanText(state, totalVolume), `workout-plan-session-${state.sessionNumber}.txt`);
+    const ok = await safeCopyText(
+      buildPlanText(state, totalVolume),
+      `workout-plan-session-${state.sessionNumber}.txt`
+    );
     alert(ok ? "План скопирован" : "Буфер недоступен — скачан .txt");
   };
 
   // DnD
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -246,7 +363,13 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
             <Text size="sm" c="dimmed" ta="center">
               Прогрессия, % за сессию
             </Text>
-            <Slider value={state.progressPct} min={1} max={25} onChange={(v) => setState((s) => ({ ...s, progressPct: v }))} mt={4} />
+            <Slider
+              value={state.progressPct}
+              min={1}
+              max={25}
+              onChange={(v) => setState((s) => ({ ...s, progressPct: v }))}
+              mt={4}
+            />
             <Text ta="center" fw={600} mt={6}>
               {state.progressPct}%
             </Text>
@@ -257,7 +380,12 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
               <Text size="sm" c="dimmed">
                 Нежная адаптация
               </Text>
-              <Switch checked={state.gentle} onChange={(e) => setState((s) => ({ ...s, gentle: e.currentTarget.checked }))} />
+              <Switch
+                checked={state.gentle}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, gentle: e.currentTarget.checked }))
+                }
+              />
             </Group>
           </Grid.Col>
         </Grid>
@@ -265,21 +393,41 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
         <Divider my="md" />
 
         <Group wrap="wrap">
-          <Button leftSection={<IconPlayerPlay size={16} />} onClick={onDone} color="indigo">
+          <Button
+            leftSection={<IconPlayerPlay size={16} />}
+            onClick={onDone}
+            color="indigo"
+          >
             Сделал
           </Button>
-          <Button variant="default" leftSection={<IconArrowDown size={16} />} onClick={onTooHard}>
+          <Button
+            variant="default"
+            leftSection={<IconArrowDown size={16} />}
+            onClick={onTooHard}
+          >
             Слишком тяжело
           </Button>
-          <Button variant="default" leftSection={<IconRefresh size={16} />} onClick={onSkip}>
+          <Button
+            variant="default"
+            leftSection={<IconRefresh size={16} />}
+            onClick={onSkip}
+          >
             Пропустить
           </Button>
-          <Button variant="subtle" leftSection={<IconCopy size={16} />} onClick={copyToday}>
+          <Button
+            variant="subtle"
+            leftSection={<IconCopy size={16} />}
+            onClick={copyToday}
+          >
             Скопировать
           </Button>
-          <Button variant="subtle" leftSection={<IconDownload size={16} />} onClick={exportTxt}>
+          {/* <Button
+            variant="subtle"
+            leftSection={<IconDownload size={16} />}
+            onClick={exportTxt}
+          >
             Скачать .txt
-          </Button>
+          </Button> */}
           <Button variant="light" onClick={() => addExercise()}>
             + Упражнение
           </Button>
@@ -290,8 +438,15 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
           Текущие упражнения (перетащи, чтобы изменить порядок)
         </Text>
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={state.exercises.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={onDragEnd}
+        >
+          <SortableContext
+            items={state.exercises.map((e) => e.id)}
+            strategy={verticalListSortingStrategy}
+          >
             <Stack gap="sm">
               {state.exercises.length === 0 && (
                 <Text size="sm" c="dimmed">
@@ -299,7 +454,14 @@ export default function PlanPage({ state, setState }: { state: PlanState; setSta
                 </Text>
               )}
               {state.exercises.map((ex, idx) => (
-                <SortableExercise key={ex.id} ex={ex} idx={idx} mutate={mutateExercise} move={moveExercise} remove={removeExercise} />
+                <SortableExercise
+                  key={ex.id}
+                  ex={ex}
+                  idx={idx}
+                  mutate={mutateExercise}
+                  move={moveExercise}
+                  remove={removeExercise}
+                />
               ))}
             </Stack>
           </SortableContext>

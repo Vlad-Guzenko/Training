@@ -1,3 +1,4 @@
+// src/main.tsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
@@ -10,8 +11,20 @@ import { Notifications } from "@mantine/notifications";
 import { HashRouter } from "react-router-dom";
 import { usePrimaryColor } from "./lib/usePrimaryColor";
 
+import { registerSW } from "virtual:pwa-register";
+
+registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    console.log("💡 Доступна новая версия. Обновите страницу.");
+  },
+  onOfflineReady() {
+    console.log("✅ Приложение готово к офлайн-работе.");
+  },
+});
+
 function Root() {
-  // Храним акцентный цвет на самом верху
+  // Акцентный цвет на верхнем уровне темы
   const [primary] = usePrimaryColor();
 
   return (
