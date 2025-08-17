@@ -34,7 +34,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [opened, setOpened] = useState(false);
   const loc = useLocation();
   const theme = useMantineTheme();
-  usePrefsSync()
+  usePrefsSync();
 
   // если ресурсы названы "ua", используем его; иначе — стандартный "uk"
   const UA_CODE = (i18n.options as any)?.resources?.ua ? "ua" : "uk";
@@ -206,7 +206,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </ScrollArea>
 
         {/* FOOTER NAVBAR — только язык */}
-        <Box p="sm" style={{ marginTop: "auto" }}>
+        <Box
+          p="sm"
+          style={{
+            marginTop: "auto",
+            paddingBottom:
+              "calc(var(--mantine-spacing-sm, 12px) + env(safe-area-inset-bottom))",
+            paddingLeft:
+              "calc(var(--mantine-spacing-sm, 12px) + env(safe-area-inset-left))",
+            paddingRight:
+              "calc(var(--mantine-spacing-sm, 12px) + env(safe-area-inset-right))",
+          }}
+        >
           <Group justify="flex-start" align="center">
             <Menu withinPortal position="right-start">
               <Menu.Target>
@@ -216,6 +227,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   size="lg"
                   aria-label={t("a11y.changeLanguage")}
                   title={t("a11y.changeLanguage")}
+                  style={{ marginBottom: 2, marginLeft: 2 }}
                 >
                   <IconLanguage size={18} />
                 </ActionIcon>
