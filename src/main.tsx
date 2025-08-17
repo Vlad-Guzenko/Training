@@ -12,6 +12,7 @@ import { HashRouter } from "react-router-dom";
 import { usePrimaryColor } from "./lib/usePrimaryColor";
 
 import { registerSW } from "virtual:pwa-register";
+import "./lib/i18n";
 
 registerSW({
   immediate: true,

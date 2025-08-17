@@ -192,3 +192,49 @@ body {
     opacity: 0.5;
   }
 }
+
+/* Глобально запретить выделение */
+* {
+  -webkit-user-select: none; /* Safari/Chrome/iOS */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge */
+  user-select: none; /* стандарт */
+}
+/* --- Mantine Notifications: фиксация для PWA --- */
+#notifications-portal {
+  /* сам портал – на всякий случай поверх всего */
+  position: relative;
+  z-index: 10000;
+}
+
+/* сам корневой контейнер уведомлений */
+.mantine-Notifications-root {
+  position: fixed !important; /* не скроллится вместе с контентом */
+  top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+
+  display: flex !important;
+  justify-content: center !important; /* по центру на мобилке */
+  pointer-events: none; /* клики проходят мимо контейнера */
+}
+
+/* сами карточки остаются кликабельными */
+.mantine-Notification-root {
+  pointer-events: auto;
+}
+
+/* на широких экранах возвращаем «справа» */
+@media (min-width: 992px) {
+  .mantine-Notifications-root {
+    justify-content: flex-end !important;
+    padding-right: 16px; /* небольшой отступ от правого края */
+  }
+}
+.mantine-Notifications-root {
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  z-index: 99999 !important;
+}

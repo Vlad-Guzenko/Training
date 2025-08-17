@@ -10,6 +10,7 @@ import {
   ActionIcon,
   Badge,
   FileInput,
+  Menu,
 } from "@mantine/core";
 import { useMantineColorScheme } from "@mantine/core";
 import {
@@ -37,6 +38,9 @@ import {
 import { cloudLoad, cloudSave } from "../lib/cloud";
 import type { PlanState } from "../types";
 import { onAuth, signInWithGoogle, signOutGoogle } from "../lib/firebase";
+import { useCloudSync } from "../lib/useCloudSync";
+import { SyncBadge } from "../components/SyncBadge";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsPage({
   state,
@@ -54,22 +58,25 @@ export default function SettingsPage({
 
   const [user, setUser] = useState<import("firebase/auth").User | null>(null);
   useEffect(() => onAuth(setUser), []);
+  const status = useCloudSync(state, setState);
 
   const toggleScheme = () =>
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
+
+  const { t } = useTranslation();
 
   const saveCloud = async () => {
     try {
       await cloudSave(state);
       notifications.show({
-        title: "Сохранено",
-        message: "Данные обновлены в облаке",
+        title: t("settings.saved"),
+        message: t("settings.updatedCloud"),
         color: "teal",
       });
     } catch (e: any) {
       notifications.show({
-        title: "Ошибка",
-        message: e?.message || "Войдите в аккаунт",
+        title: t("settings.error"),
+        message: e?.message || t("settings.needLogin"),
         color: "red",
       });
     }
@@ -83,21 +90,21 @@ export default function SettingsPage({
         localStorage.setItem(LS_KEY, JSON.stringify(data));
         setSize(roughStorageSize());
         notifications.show({
-          title: "Загружено",
-          message: "Данные подтянуты из облака",
+          title: t("settings.loaded"),
+          message: t("settings.pulledFromCloud"),
           color: "teal",
         });
       } else {
         notifications.show({
-          title: "Пусто",
-          message: "В облаке пока нет данных",
+          title: t("settings.empty"),
+          message: t("settings.noCloud"),
           color: "yellow",
         });
       }
     } catch (e: any) {
       notifications.show({
-        title: "Ошибка",
-        message: e?.message || "Войдите в аккаунт",
+        title: t("settings.error"),
+        message: e?.message || t("settings.needLogin"),
         color: "red",
       });
     }
@@ -126,14 +133,14 @@ export default function SettingsPage({
       a.click();
       URL.revokeObjectURL(url);
       notifications.show({
-        title: "Экспорт готов",
-        message: "Скачан файл workout-plan-state.json",
+        title: t("settings.exportReady"),
+        message: t("settings.downloaded"),
         color: "teal",
       });
     } catch {
       notifications.show({
-        title: "Ошибка экспорта",
-        message: "Не удалось сформировать файл",
+        title: t("settings.exportError"),
+        message: t("settings.exportFail"),
         color: "red",
       });
     }
@@ -146,15 +153,15 @@ export default function SettingsPage({
       const json = JSON.parse(text);
       localStorage.setItem(LS_KEY, JSON.stringify(json));
       notifications.show({
-        title: "Импорт успешен",
-        message: "Перезагружаю приложение…",
+        title: t("settings.importOk"),
+        message: t("settings.reloading"),
         color: "teal",
       });
       setTimeout(() => window.location.reload(), 500);
     } catch {
       notifications.show({
-        title: "Ошибка импорта",
-        message: "Неверный формат файла",
+        title: t("settings.importError"),
+        message: t("settings.importInvalid"),
         color: "red",
       });
     }
@@ -165,14 +172,14 @@ export default function SettingsPage({
       localStorage.removeItem(LS_KEY);
       setSize(roughStorageSize());
       notifications.show({
-        title: "Данные очищены",
-        message: "Состояние приложения сброшено",
+        title: t("settings.cleared"),
+        message: t("settings.stateCleared"),
         color: "orange",
       });
     } catch {
       notifications.show({
-        title: "Ошибка очистки",
-        message: "Не удалось удалить данные",
+        title: t("settings.clearError"),
+        message: t("settings.clearFail"),
         color: "red",
       });
     }
@@ -183,14 +190,14 @@ export default function SettingsPage({
       const raw = localStorage.getItem(LS_KEY) || "{}";
       await navigator.clipboard.writeText(raw);
       notifications.show({
-        title: "Скопировано",
-        message: "Текущее состояние в буфере обмена",
+        title: t("settings.copied"),
+        message: t("settings.stateCopied"),
         color: "teal",
       });
     } catch {
       notifications.show({
-        title: "Буфер недоступен",
-        message: "Сделайте экспорт в файл",
+        title: t("settings.clipboardNA"),
+        message: t("settings.exportInstead"),
         color: "yellow",
       });
     }
@@ -198,8 +205,8 @@ export default function SettingsPage({
 
   const testNotification = () =>
     notifications.show({
-      title: "Пример уведомления",
-      message: "Так оно будет выглядеть в интерфейсе",
+      title: t("settings.sampleTitle"),
+      message: t("settings.sampleMsg"),
       color: theme.colors[theme.primaryColor][6],
       autoClose: 1500,
     });
@@ -207,7 +214,7 @@ export default function SettingsPage({
   return (
     <>
       <Title order={2} mb="sm">
-        Настройки
+        {t("settings.title")}
       </Title>
 
       <Stack gap="md">
@@ -217,30 +224,34 @@ export default function SettingsPage({
             <Group>
               <Avatar src={user?.photoURL ?? undefined} radius="xl" />
               <div>
-                <Text fw={600}>Аккаунт</Text>
+                <Text fw={600}>{t("settings.account")}</Text>
                 <Text size="sm" c="dimmed">
                   {user
                     ? user.email || user.displayName
-                    : "Войдите, чтобы синхронизировать данные"}
+                    : t("settings.loginToSync")}
                 </Text>
               </div>
             </Group>
-            {user ? (
-              <Button
-                leftSection={<IconLogout size={16} />}
-                variant="default"
-                onClick={signOutGoogle}
-              >
-                Выйти
-              </Button>
-            ) : (
-              <Button
-                leftSection={<IconBrandGoogle size={16} />}
-                onClick={signInWithGoogle}
-              >
-                Войти через Google
-              </Button>
-            )}
+
+            <Group>
+              <SyncBadge status={status} />
+              {user ? (
+                <Button
+                  leftSection={<IconLogout size={16} />}
+                  variant="default"
+                  onClick={signOutGoogle}
+                >
+                  {t("settings.signOut")}
+                </Button>
+              ) : (
+                <Button
+                  leftSection={<IconBrandGoogle size={16} />}
+                  onClick={signInWithGoogle}
+                >
+                  {t("settings.signInGoogle")}
+                </Button>
+              )}
+            </Group>
           </Group>
 
           <Divider my="sm" />
@@ -250,7 +261,7 @@ export default function SettingsPage({
               onClick={saveCloud}
               disabled={!user}
             >
-              Сохранить в облако
+              {t("settings.cloudSave")}
             </Button>
             <Button
               leftSection={<IconCloudDown size={16} />}
@@ -258,13 +269,14 @@ export default function SettingsPage({
               variant="default"
               disabled={!user}
             >
-              Загрузить из облака
+              {t("settings.cloudLoad")}
             </Button>
           </Group>
         </Card>
+
         <Card withBorder shadow="sm" radius="md">
           <Text fw={600} mb="xs">
-            Акцентный цвет
+            {t("settings.accentColor")}
           </Text>
           <SimpleGrid cols={8} spacing="xs">
             {Object.keys(theme.colors).map((color) => (
@@ -274,8 +286,8 @@ export default function SettingsPage({
                 onClick={() => {
                   setPrimary(color);
                   notifications.show({
-                    title: "Цвет изменён",
-                    message: `Теперь акцентный цвет — ${color}`,
+                    title: t("settings.colorChanged"),
+                    message: t("settings.colorChangedMsg", { color }),
                     color: color,
                   });
                 }}
@@ -293,9 +305,9 @@ export default function SettingsPage({
         <Card withBorder shadow="sm" radius="md">
           <Group justify="space-between" align="center">
             <div>
-              <Text fw={600}>Тема интерфейса</Text>
+              <Text fw={600}>{t("settings.theme")}</Text>
               <Text c="dimmed" size="sm">
-                Переключение светлой / тёмной темы
+                {t("settings.themeHint")}
               </Text>
             </div>
             <ActionIcon
@@ -318,16 +330,16 @@ export default function SettingsPage({
         <Card withBorder shadow="sm" radius="md">
           <Group justify="space-between" align="center">
             <div>
-              <Text fw={600}>Уведомления</Text>
+              <Text fw={600}>{t("settings.notifications")}</Text>
               <Text c="dimmed" size="sm">
-                Проверить, где и как появляются уведомления
+                {t("settings.notifyCheck")}
               </Text>
             </div>
             <Button
               leftSection={<IconBell size={16} />}
               onClick={testNotification}
             >
-              Тест уведомления
+              {t("settings.notificationsTest")}
             </Button>
           </Group>
         </Card>
@@ -335,7 +347,7 @@ export default function SettingsPage({
         {/* Данные */}
         <Card withBorder shadow="sm" radius="md">
           <Text fw={600} mb="xs">
-            Данные
+            {t("settings.data")}
           </Text>
           <Group gap="sm" wrap="wrap">
             <Button
@@ -343,10 +355,10 @@ export default function SettingsPage({
               leftSection={<IconDownload size={16} />}
               onClick={handleExport}
             >
-              Экспорт JSON
+              {t("settings.export")}
             </Button>
             <FileInput
-              placeholder="Выберите JSON для импорта"
+              placeholder={t("settings.selectJsonToImport")}
               leftSection={<IconUpload size={16} />}
               accept="application/json"
               onChange={handleImport}
@@ -359,21 +371,21 @@ export default function SettingsPage({
               leftSection={<IconTrash size={16} />}
               onClick={handleClear}
             >
-              Очистить данные
+              {t("settings.clear")}
             </Button>
             <Button
               variant="default"
               leftSection={<IconClipboard size={16} />}
               onClick={handleCopyState}
             >
-              Копировать в буфер
+              {t("settings.copyClipboard")}
             </Button>
           </Group>
 
           <Divider my="sm" />
           <Group>
             <Text c="dimmed" size="sm">
-              Объём хранилища:
+              {t("settings.storageSize")}
             </Text>
             <Badge variant="light">{size} КБ</Badge>
           </Group>
@@ -381,10 +393,9 @@ export default function SettingsPage({
 
         {/* О приложении */}
         <Card withBorder shadow="sm" radius="md">
-          <Text fw={600}>О приложении</Text>
+          <Text fw={600}>{t("settings.about")}</Text>
           <Text c="dimmed" size="sm">
-            Всё работает локально, данные сохраняются в вашем браузере
-            (localStorage).
+            {t("settings.aboutText")}
           </Text>
         </Card>
       </Stack>

@@ -1,4 +1,3 @@
-// src/lib/cloudNormalized.ts
 import { auth, db } from "../lib/firebase";
 import {
   collection,
@@ -99,10 +98,11 @@ export async function addSession(workoutId: string, s: CloudSession) {
   );
 }
 
-// ---- Prefs (оформление) ----
+// ---- Prefs (оформление + язык) ----
 export type UserPrefs = {
   primaryColor?: string; // например "indigo"
-  colorScheme?: "light" | "dark"; // "auto" можно хранить по желанию
+  colorScheme?: "light" | "dark";
+  lang?: "ua" | "en" | "it" | "ru"; // <— добавили язык
   updatedAt?: Timestamp;
 };
 
@@ -117,6 +117,7 @@ export async function loadUserPrefs(): Promise<UserPrefs | null> {
 export async function saveUserPrefs(p: {
   primaryColor?: string;
   colorScheme?: "light" | "dark";
+  lang?: "ua" | "en" | "it" | "ru"; // <— добавили язык
 }) {
   const u = assertUser();
   const ref = doc(db, "users", u.uid, "data", "prefs");

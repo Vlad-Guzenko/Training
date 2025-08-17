@@ -54,6 +54,8 @@ import {
 } from "../lib/workout";
 import { markLocalUpdated } from "../lib/useCloudSync";
 import { addSession, ensureDefaultWorkout } from "../lib/cloudNormalized";
+import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 /* ---------- компактный счётчик – / + ---------- */
 function StatControl({
@@ -189,7 +191,7 @@ function SortableExercise({
             WebkitUserSelect: "none",
             userSelect: "none",
           }}
-          title="Перетащить"
+          title={t("plan.dragHandle")}
           {...attributes}
           {...listeners}
         >
@@ -206,14 +208,14 @@ function SortableExercise({
         style={{ width: "100%" }}
       >
         <StatControl
-          label="Повт."
+          label={t("plan.repsShort")}
           value={ex.reps}
           dec={() => mutate(ex.id, { reps: clamp((ex.reps || 1) - 1, 1, 500) })}
           inc={() => mutate(ex.id, { reps: clamp((ex.reps || 1) + 1, 1, 500) })}
           max={500}
         />
         <StatControl
-          label="Подходы"
+          label={t("plan.setsShort")}
           value={ex.sets}
           dec={() => mutate(ex.id, { sets: clamp((ex.sets || 1) - 1, 1, 20) })}
           inc={() => mutate(ex.id, { sets: clamp((ex.sets || 1) + 1, 1, 20) })}
@@ -230,7 +232,7 @@ function SortableExercise({
             size="compact-sm"
             onClick={() => setNotesOpen((v) => !v)}
           >
-            {notesOpen ? "Скрыть заметки" : "Заметки"}
+            {notesOpen ? t("common.hideNotes") : t("common.notes")}
           </Button>
 
           {hasNotes && (
@@ -246,7 +248,7 @@ function SortableExercise({
         <ActionIcon
           color="red"
           variant="subtle"
-          title="Удалить"
+          title={t("common.delete")}
           onClick={() => remove(ex.id)}
         >
           <IconTrash size={18} />
@@ -259,7 +261,7 @@ function SortableExercise({
           autosize
           minRows={1}
           maxRows={3}
-          placeholder="Добавить заметку…"
+          placeholder={t("plan.notesPlaceholder")}
           value={ex.notes || ""}
           onChange={(e) => mutate(ex.id, { notes: e.currentTarget.value })}
         />
@@ -283,6 +285,7 @@ export default function PlanPage({
 
   const isSmall = useMediaQuery("(max-width: 48em)"); // ~768px
   const isDesktop = useMediaQuery("(min-width: 62em)"); // для модификаторов DnD
+  const { t } = useTranslation();
 
   const bumpSession = (d: number) =>
     setState((s) => ({
@@ -301,7 +304,7 @@ export default function PlanPage({
       ...s,
       exercises: [
         ...s.exercises,
-        { id: uid(), name: "Новое упражнение", sets: 3, reps: 10, ...it },
+        { id: uid(), name: t("plan.newExercise"), sets: 3, reps: 10, ...it },
       ],
     }));
 
@@ -427,7 +430,7 @@ export default function PlanPage({
       buildPlanText(state, totalVolume),
       `workout-plan-session-${state.sessionNumber}.txt`
     );
-    alert(ok ? "План скопирован" : "Буфер недоступен — скачан .txt");
+    alert(ok ? t("plan.planCopied") : t("plan.clipboardFallback"));
   };
 
   // DnD: Pointer + Touch (для PWA). На мобиле ограничиваем ось Y, на ПК без ограничений.
@@ -451,14 +454,14 @@ export default function PlanPage({
   return (
     <>
       <Title order={2} mb="sm">
-        План
+        {t("plan.title")}
       </Title>
 
       <Card withBorder shadow="sm" radius="md">
         <Grid gutter="md" align="center">
           <Grid.Col span={{ base: 12, sm: 4 }}>
             <Text size="sm" c="dimmed">
-              Текущая сессия
+              {t("plan.currentSession")}
             </Text>
             <Group mt={6} gap="xs">
               <Button variant="default" onClick={() => bumpSession(-1)}>
@@ -475,7 +478,7 @@ export default function PlanPage({
 
           <Grid.Col span={{ base: 12, sm: 5 }}>
             <Text size="sm" c="dimmed" ta="center">
-              Прогрессия, % за сессию
+              {t("plan.progressPerSession")}
             </Text>
             <Slider
               value={state.progressPct}
@@ -492,7 +495,7 @@ export default function PlanPage({
           <Grid.Col span={{ base: 12, sm: 3 }}>
             <Group justify={isSmall ? "flex-start" : "flex-end"} wrap="wrap">
               <Text size="sm" c="dimmed">
-                Нежная адаптация
+                {t("plan.gentleAdaptation")}
               </Text>
               <Switch
                 checked={state.gentle}
@@ -510,37 +513,37 @@ export default function PlanPage({
             onClick={onDone}
             color="indigo"
           >
-            Сделал
+            {t("plan.didIt")}
           </Button>
           <Button
             variant="default"
             leftSection={<IconArrowDown size={16} />}
             onClick={onTooHard}
           >
-            Слишком тяжело
+            {t("plan.tooHard")}
           </Button>
           <Button
             variant="default"
             leftSection={<IconRefresh size={16} />}
             onClick={onSkip}
           >
-            Пропустить
+            {t("plan.skip")}
           </Button>
           <Button
             variant="subtle"
             leftSection={<IconCopy size={16} />}
             onClick={copyToday}
           >
-            Скопировать
+            {t("plan.copyPlan")}
           </Button>
           <Button variant="light" onClick={() => addExercise()}>
-            + Упражнение
+            {t("plan.addExercise")}
           </Button>
         </Group>
 
         <Divider my="md" />
         <Text fw={600} mb="xs">
-          Текущие упражнения (перетащи, чтобы изменить порядок)
+          {t("plan.listTitle")}
         </Text>
 
         <DndContext
@@ -558,7 +561,7 @@ export default function PlanPage({
               {state.exercises.length === 0 && (
                 <Grid.Col span={12}>
                   <Text size="sm" c="dimmed">
-                    Добавь упражнения на вкладке «Упражнения» слева.
+                    {t("plan.addExerciseFrom")}
                   </Text>
                 </Grid.Col>
               )}

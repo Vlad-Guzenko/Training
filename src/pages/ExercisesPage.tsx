@@ -28,6 +28,8 @@ import { auth } from "../lib/firebase";
 import { ActionIcon, Tooltip } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import { deleteCustomExercise } from "../lib/customExercises"; // есть в нашем API
+import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 const ENV_OPTS: { value: Env; label: string }[] = [
   { value: "outdoor", label: "Улица" },
@@ -165,6 +167,7 @@ export default function ExercisesPage({
   // текущие фильтры списка
   const [env, setEnv] = useState<Env>("outdoor");
   const [muscle, setMuscle] = useState<Muscle>("full");
+  const { t } = useTranslation();
 
   const {
     items: myCustoms,
@@ -186,9 +189,9 @@ export default function ExercisesPage({
       notes: "", // заметки
     },
     validate: {
-      name: (v) => (v.trim().length < 2 ? "Минимум 2 символа" : null),
-      sets: (v) => (v < 1 ? "Не меньше 1" : null),
-      reps: (v) => (v < 1 ? "Не меньше 1" : null),
+      name: (v) => (v.trim().length < 2 ? t("exercises.min2Chars") : null),
+      sets: (v) => (v < 1 ? t("exercises.notLess1") : null),
+      reps: (v) => (v < 1 ? t("exercises.notLess1") : null),
     },
   });
 
@@ -220,18 +223,16 @@ export default function ExercisesPage({
     setEnv(pickEnv);
     setMuscle(pickMuscle);
     pick.close();
+
+    const envLabel = t(`env.${pickEnv}`).toLowerCase();
+    const muscleLabel = t(`muscle.${pickMuscle}`).toLowerCase();
+
     notifications.show({
-      title: "Подбор применён",
+      title: t("exercises.pickApplied"),
       message:
         pickMuscle === "full"
-          ? `Показаны упражнения: ${ENV_OPTS.find(
-              (e) => e.value === pickEnv
-            )?.label.toLowerCase()} • все группы`
-          : `Показаны упражнения: ${ENV_OPTS.find(
-              (e) => e.value === pickEnv
-            )?.label.toLowerCase()} • ${MUSCLE_OPTS.find(
-              (m) => m.value === pickMuscle
-            )?.label.toLowerCase()}`,
+          ? t("exercises.showingAll", { env: envLabel })
+          : t("exercises.showing", { env: envLabel, muscle: muscleLabel }),
       color: primary as any,
       autoClose: 2000,
       position: "top-right",
@@ -244,14 +245,14 @@ export default function ExercisesPage({
       ...s,
       exercises: [
         ...s.exercises,
-        { id: uid(), name: "Новое упражнение", sets: 3, reps: 10, ...it },
+        { id: uid(), name: t("plan.newExercise"), sets: 3, reps: 10, ...it },
       ],
     }));
 
   // при клике по «Выбрать» показываем тост с CTA «Добавить в план»
   const selectExercise = (it: LibItem) => {
     const id = notifications.show({
-      title: "Упражнение выбрано",
+      title: t("exercises.selected"),
       message: (
         <Group justify="space-between" wrap="nowrap">
           <Text size="sm">
@@ -270,14 +271,14 @@ export default function ExercisesPage({
               });
               notifications.update({
                 id,
-                title: "Добавлено в план",
-                message: `${it.name} добавлено`,
+                title: t("exercises.addedToPlanTitle"),
+                message: t("exercises.addedToPlanMsg", { name: it.name }),
                 color: "teal",
                 autoClose: 1500,
               });
             }}
           >
-            Добавить в план
+            {t("exercises.addToPlan")}
           </Button>
         </Group>
       ),
@@ -328,7 +329,7 @@ export default function ExercisesPage({
                 });
               }}
             >
-              Добавить в план
+              {t("exercises.addToPlan")}
             </Button>
           </Group>
         ),
@@ -339,8 +340,8 @@ export default function ExercisesPage({
       });
     } catch (e: any) {
       notifications.show({
-        title: "Ошибка",
-        message: e?.message || "Не удалось сохранить упражнение",
+        title: t("common.error"),
+        message: e?.message || t("exercises.saveFail"),
         color: "red",
         position: "top-right",
       });
@@ -369,16 +370,16 @@ export default function ExercisesPage({
         );
       }
       notifications.show({
-        title: "Удалено",
-        message: `«${item.name}» убрано из моих упражнений`,
+        title: t("exercises.removedFromMineTitle"),
+        message: t("exercises.removedFromMineTitle"),
         color: "orange",
         position: "top-right",
         autoClose: 1500,
       });
     } catch (e: any) {
       notifications.show({
-        title: "Ошибка",
-        message: e?.message || "Не удалось удалить",
+        title: t("common.error"),
+        message: e?.message || t("exercises.deleteFail"),
         color: "red",
         position: "top-right",
       });
@@ -388,13 +389,13 @@ export default function ExercisesPage({
   return (
     <>
       <Title order={2} mb="sm">
-        Упражнения
+        {t("exercises.title")}
       </Title>
 
       <Card withBorder shadow="sm" radius="md">
         <Group wrap="wrap" mb="sm" gap="sm">
           <Select
-            label="Где тренируемся"
+            label={t("exercises.where")}
             data={ENV_OPTS}
             value={env}
             onChange={(v) => v && setEnv(v as Env)}
@@ -402,7 +403,7 @@ export default function ExercisesPage({
             w={{ base: "100%", sm: 220 }}
           />
           <Select
-            label="Мышечная группа"
+            label={t("exercises.muscleGroup")}
             data={MUSCLE_OPTS}
             value={muscle}
             onChange={(v) => v && setMuscle(v as Muscle)}
@@ -417,7 +418,7 @@ export default function ExercisesPage({
             h={36}
             mt={{ base: 4, sm: 24 }}
           >
-            Подобрать
+            {t("exercises.pick")}
           </Button>
           <Button
             size="sm"
@@ -442,7 +443,7 @@ export default function ExercisesPage({
             h={36}
             mt={{ base: 4, sm: 24 }}
           >
-            Добавить своё
+            {t("exercises.addCustom")}
           </Button>
         </Group>
 
@@ -473,12 +474,12 @@ export default function ExercisesPage({
 
               {/* ← корзина только если это пользовательское упражнение */}
               {customIndex.has(keyOf(it)) && (
-                <Tooltip label="Удалить из моих" withArrow>
+                <Tooltip label={t("exercises.deleteFromMine")} withArrow>
                   <ActionIcon
                     variant="light"
                     color="red"
                     onClick={() => handleDeleteCustom(it)}
-                    aria-label="Удалить из моих"
+                    aria-label={t("exercises.deleteFromMine")}
                   >
                     <IconTrash size={16} />
                   </ActionIcon>
@@ -498,8 +499,12 @@ export default function ExercisesPage({
                     notes: it.notes,
                   });
                   notifications.show({
-                    title: "Упражнение добавлено",
-                    message: `${it.name} (${it.sets}×${it.reps}) добавлено в план`,
+                    title: t("exercises.addToPlanTitle"),
+                    message: t("exercises.addedToPlanToast", {
+                      name: it.name,
+                      sets: it.sets,
+                      reps: it.reps,
+                    }),
                     color: "teal",
                     position: "top-right",
                     autoClose: 2000,
@@ -507,7 +512,7 @@ export default function ExercisesPage({
                 }}
                 w={{ base: "100%", sm: "auto" }}
               >
-                Добавить
+                {t("common.add")}
               </Button>
             </Group>
           </Card>
@@ -518,34 +523,34 @@ export default function ExercisesPage({
       <Modal
         opened={pickOpen}
         onClose={pick.close}
-        title="Подобрать упражнения"
+        title={t("exercises.modalPickTitle")}
         centered
       >
         <Stack>
           <Select
-            label="Где тренируемся"
+            label={t("exercises.where")}
             data={ENV_OPTS}
             value={pickEnv}
             onChange={(v) => v && setPickEnv(v as Env)}
           />
           <Select
-            label="Мышечная группа"
+            label={t("exercises.muscleGroup")}
             data={MUSCLE_OPTS}
             value={pickMuscle}
             onChange={(v) => v && setPickMuscle(v as Muscle)}
           />
           <Group justify="flex-end" mt="xs">
             <Button variant="default" onClick={pick.close}>
-              Отмена
+              {t("common.cancel")}
             </Button>
-            <Button onClick={applyPick}>Показать</Button>
+            <Button onClick={applyPick}>{t("common.show")}</Button>
           </Group>
         </Stack>
       </Modal>
       <Modal
         opened={opened}
         onClose={() => setOpened(false)}
-        title="Своё упражнение"
+        title={t("exercises.modalCustomTitle")}
         centered
       >
         <form
@@ -554,7 +559,7 @@ export default function ExercisesPage({
         >
           <Group wrap="wrap" align="end">
             <Select
-              label="Где тренируемся"
+              label={t("exercises.where")}
               data={ENV_OPTS}
               value={form.values.env}
               onChange={(v) => v && form.setFieldValue("env", v as Env)}
@@ -562,7 +567,7 @@ export default function ExercisesPage({
               w={{ base: "100%", sm: 200 }}
             />
             <Select
-              label="Мышечная группа"
+              label={t("exercises.muscleGroup")}
               data={MUSCLE_OPTS.filter((m) => m.value !== "full")}
               value={form.values.muscle}
               onChange={(v) =>
@@ -574,21 +579,21 @@ export default function ExercisesPage({
           </Group>
 
           <TextInput
-            label="Название"
-            placeholder="Например: Жим гантелей сидя"
+            label={t("exercises.name")}
+            placeholder={t("exercises.exerciseExmpl")}
             {...form.getInputProps("name")}
             size="sm"
           />
 
           <Group grow>
             <NumberInput
-              label="Подходы"
+              label={t("exercises.sets")}
               min={1}
               {...form.getInputProps("sets")}
               size="sm"
             />
             <NumberInput
-              label="Повторы"
+              label={t("exercises.reps")}
               min={1}
               {...form.getInputProps("reps")}
               size="sm"
@@ -596,17 +601,17 @@ export default function ExercisesPage({
           </Group>
 
           <TextInput
-            label="Заметки"
-            placeholder="Опционально"
+            label={t("common.notes")}
+            placeholder={t("exercises.notes")}
             {...form.getInputProps("notes")}
             size="sm"
           />
 
           <Group justify="flex-end" mt="xs">
             <Button variant="default" onClick={() => setOpened(false)}>
-              Отмена
+              {t("common.cancel")}
             </Button>
-            <Button type="submit">Сохранить</Button>
+            <Button type="submit">{t("common.save")}</Button>
           </Group>
         </form>
       </Modal>

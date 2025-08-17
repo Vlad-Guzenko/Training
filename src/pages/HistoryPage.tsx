@@ -22,6 +22,8 @@ import {
   Brush,
 } from "recharts";
 import type { PlanState } from "../types";
+import { t } from "i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 // ---------- тип точки ----------
 type DP = {
@@ -94,6 +96,7 @@ export default function HistoryPage({ state }: { state: PlanState }) {
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
   const [range, setRange] = useState<"30" | "90" | "180" | "365" | "all">("90");
+  const { t } = useTranslation();
 
   // исходные данные
   const dataFull: DP[] = useMemo(() => {
@@ -126,12 +129,10 @@ export default function HistoryPage({ state }: { state: PlanState }) {
     return (
       <>
         <Title order={2} mb="sm">
-          История
+          {t("history.title")}
         </Title>
         <Card withBorder shadow="sm" radius="md" p="md">
-          <Text c="dimmed">
-            Пока нет данных. Заверши хотя бы одну сессию — график оживёт.
-          </Text>
+          <Text c="dimmed">{t("history.noData")}</Text>
         </Card>
       </>
     );
@@ -171,21 +172,21 @@ export default function HistoryPage({ state }: { state: PlanState }) {
   return (
     <>
       <Title order={2} mb="sm">
-        История
+        {t("history.title")}
       </Title>
       <Card withBorder shadow="sm" radius="md" p="md">
         <Group justify="space-between" mb="xs">
-          <Text fw={700}>Прогресс по объёму</Text>
+          <Text fw={700}>{t("history.progress")}</Text>
           <SegmentedControl
             size="xs"
             value={range}
             onChange={(v) => setRange(v as any)}
             data={[
-              { label: "30д", value: "30" },
-              { label: "90д", value: "90" },
-              { label: "6м", value: "180" },
-              { label: "12м", value: "365" },
-              { label: "Все", value: "all" },
+              { label: t("history.range.30d"), value: "30" },
+              { label: t("history.range.90d"), value: "90" },
+              { label: t("history.range.6m"), value: "180" },
+              { label: t("history.range.12m"), value: "365" },
+              { label: t("history.range.all"), value: "all" },
             ]}
           />
         </Group>
@@ -215,7 +216,9 @@ export default function HistoryPage({ state }: { state: PlanState }) {
                 cursor={{ stroke: gridColor, strokeDasharray: "3 3" }}
                 wrapperStyle={{ backdropFilter: "blur(2px)" }}
                 formatter={(val: any, key: string) =>
-                  key === "volume" ? [`${val}`, "Объём"] : [`${val}`, "RPE"]
+                  key === "volume"
+                    ? [`${val}`, t("history.volume")]
+                    : [`${val}`, "RPE"]
                 }
                 labelFormatter={(_label, payload) => {
                   const p = Array.isArray(payload)
@@ -297,17 +300,17 @@ export default function HistoryPage({ state }: { state: PlanState }) {
         >
           <Group align="flex-start" gap="sm" wrap="nowrap">
             <Text size="sm" c="dimmed">
-              <b>Как читать график:</b>
-              <br />
-              <span style={{ color: volumeStroke }}>Сплошная линия</span> —
-              объём за сессию. <span style={{ color: maColor }}>Пунктир</span> —
-              скользящая средняя (MA{maWindow}) для сглаживания тренда.{" "}
-              <span style={{ color: prColor }}>Зелёные точки</span> — личные
-              рекорды (PR) на момент сессии.
-              <br />
-              Вверху выбери период (30/90 дней, 6/12 месяцев или всё). Ползунок
-              внизу позволяет прокручивать и приближать нужный участок. Наведи
-              на точку, чтобы увидеть дату, RPE и объём.
+              <Trans
+                i18nKey="history.howToRead"
+                values={{ maWindow }}
+                components={{
+                  b: <b />,
+                  br: <br />,
+                  solid: <span style={{ color: volumeStroke }} />,
+                  dashed: <span style={{ color: maColor }} />,
+                  pr: <span style={{ color: prColor }} />,
+                }}
+              />
             </Text>
           </Group>
         </CardSection>

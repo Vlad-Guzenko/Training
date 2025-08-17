@@ -10,8 +10,9 @@ import {
   ScrollArea,
   Box,
   useMantineTheme,
+  useMantineColorScheme,
+  Menu,
 } from "@mantine/core";
-import { useMantineColorScheme } from "@mantine/core";
 import { NavLink as RouterLink, useLocation } from "react-router-dom";
 import {
   IconHome,
@@ -21,20 +22,34 @@ import {
   IconSun,
   IconMoonStars,
   IconWeight,
+  IconLanguage,
+  IconCheck,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
+import { usePrefsSync } from "./lib/usePrefsSync";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const { t, i18n } = useTranslation(); // подписка на смену языка
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const [opened, setOpened] = useState(false);
   const loc = useLocation();
   const theme = useMantineTheme();
+  usePrefsSync()
+
+  // если ресурсы названы "ua", используем его; иначе — стандартный "uk"
+  const UA_CODE = (i18n.options as any)?.resources?.ua ? "ua" : "uk";
+  const LANGS = [
+    { value: "en", label: "EN" },
+    { value: "it", label: "IT" },
+    { value: "ru", label: "RU" },
+    { value: UA_CODE, label: "UA" },
+  ];
 
   // закрываем сайдбар при переходе
   React.useEffect(() => setOpened(false), [loc.pathname]);
 
   // iOS PWA helper-класс
   useEffect(() => {
-    // только для iOS PWA
     const isStandalone =
       window.matchMedia?.("(display-mode: standalone)")?.matches ||
       (navigator as any).standalone;
@@ -93,7 +108,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               onClick={() => setOpened((o) => !o)}
               hiddenFrom="sm"
               size="sm"
-              aria-label="Открыть меню"
+              aria-label={opened ? t("a11y.closeMenu") : t("a11y.openMenu")}
+              aria-expanded={opened}
+              title={opened ? t("a11y.closeMenu") : t("a11y.openMenu")}
             />
             <Text
               fw={700}
@@ -115,7 +132,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             radius="xl"
             size="lg"
             onClick={toggleColorScheme}
-            aria-label="Сменить тему"
+            aria-label={
+              colorScheme === "dark"
+                ? t("a11y.switchToLightTheme")
+                : t("a11y.switchToDarkTheme")
+            }
+            title={
+              colorScheme === "dark"
+                ? t("a11y.switchToLightTheme")
+                : t("a11y.switchToDarkTheme")
+            }
           >
             {colorScheme === "dark" ? (
               <IconSun size={18} />
@@ -127,11 +153,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </AppShell.Header>
 
       {/* NAVBAR — свой скролл, высота ограничена экраном минус хедер и safe-top */}
-      <AppShell.Navbar p="sm" withBorder>
+      {/* key={i18n.language} форс-перемонтирует navbar при смене языка */}
+      <AppShell.Navbar p="sm" withBorder key={i18n.language}>
         <ScrollArea
           type="auto"
           style={{
-            // высота = реальная высота экрана (через --app-vh) минус safe-top и минус хедер
             height: `calc((var(--app-vh, 1vh) * 100) - ${SAFE_TOP} - ${HEADER_H}px)`,
             WebkitOverflowScrolling: "touch",
             overscrollBehavior: "contain",
@@ -140,7 +166,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <NavLink
             component={RouterLink}
             to="/"
-            label="План"
+            label={t("plan.title")}
             active={isActive("/")}
             leftSection={<IconHome size={18} />}
             onClick={() => setOpened(false)}
@@ -148,7 +174,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <NavLink
             component={RouterLink}
             to="/exercises"
-            label="Упражнения"
+            label={t("exercises.title")}
             active={isActive("/exercises")}
             leftSection={<IconWeight size={18} />}
             onClick={() => setOpened(false)}
@@ -156,7 +182,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <NavLink
             component={RouterLink}
             to="/history"
-            label="История"
+            label={t("history.title")}
             active={isActive("/history")}
             leftSection={<IconHistory size={18} />}
             onClick={() => setOpened(false)}
@@ -164,7 +190,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <NavLink
             component={RouterLink}
             to="/timer"
-            label="Таймер"
+            label={t("timer.title")}
             active={isActive("/timer")}
             leftSection={<IconClockHour4 size={18} />}
             onClick={() => setOpened(false)}
@@ -172,12 +198,50 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <NavLink
             component={RouterLink}
             to="/settings"
-            label="Настройки"
+            label={t("settings.title")}
             active={isActive("/settings")}
             leftSection={<IconSettings size={18} />}
             onClick={() => setOpened(false)}
           />
         </ScrollArea>
+
+        {/* FOOTER NAVBAR — только язык */}
+        <Box p="sm" style={{ marginTop: "auto" }}>
+          <Group justify="flex-start" align="center">
+            <Menu withinPortal position="right-start">
+              <Menu.Target>
+                <ActionIcon
+                  variant="default"
+                  radius="xl"
+                  size="lg"
+                  aria-label={t("a11y.changeLanguage")}
+                  title={t("a11y.changeLanguage")}
+                >
+                  <IconLanguage size={18} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {LANGS.map((l) => (
+                  <Menu.Item
+                    key={l.value}
+                    onClick={() => {
+                      i18n.changeLanguage(l.value);
+                      try {
+                        localStorage.setItem("i18nextLng", l.value);
+                      } catch {}
+                      setOpened(false);
+                    }}
+                    rightSection={
+                      i18n.language === l.value ? <IconCheck size={14} /> : null
+                    }
+                  >
+                    {l.label}
+                  </Menu.Item>
+                ))}
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        </Box>
       </AppShell.Navbar>
 
       {/* MAIN — скролл только здесь; учитываем safe areas */}

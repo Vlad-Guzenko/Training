@@ -12,6 +12,7 @@ import {
   signInWithRedirect,
 } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { t } from "i18next";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FB_API_KEY,
@@ -37,8 +38,8 @@ export async function signInWithGoogle() {
     const msg = e?.message ?? String(e);
     // Показать, что именно пошло не так
     notifications.show({
-      title: "Вход не удался",
-      message: `${code}: ${msg}`,
+      title: t("auth.signInFailedTitle"),
+      message: t("auth.errorCode", { code, msg }),
       color: "red",
     });
 
@@ -51,15 +52,19 @@ export async function signInWithGoogle() {
     ) {
       try {
         notifications.show({
-          title: "Пробую альтернативный вход",
-          message: "Перенаправление через Google…",
+          title: t("auth.signInRedirectTryTitle"),
+          message: t("auth.signInRedirectTryMsg"),
           color: "indigo",
         });
+
         await signInWithRedirect(auth, provider);
       } catch (e2: any) {
         notifications.show({
-          title: "Редирект тоже не удался",
-          message: `${e2?.code ?? ""} ${e2?.message ?? ""}`,
+          title: t("auth.signInRedirectFailedTitle"),
+          message: t("auth.errorCode", {
+            code: e2?.code ?? "",
+            msg: e2?.message ?? "",
+          }),
           color: "red",
         });
       }
