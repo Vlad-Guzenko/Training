@@ -50,6 +50,7 @@ import {
 } from "firebase/firestore";
 import { useDisclosure } from "@mantine/hooks";
 import { useMediaQuery } from "@mantine/hooks";
+import { AUTHOR } from "../lib/appInfo";
 
 export default function SettingsPage({
   state,
@@ -549,10 +550,42 @@ export default function SettingsPage({
 
         {/* О приложении */}
         <Card withBorder shadow="sm" radius="md">
-          <Text fw={600}>{t("settings.about")}</Text>
-          <Text c="dimmed" size="sm">
-            {t("settings.aboutText")}
+          <Text fw={600}>{t("about.about")}</Text>
+          <Text
+            c="dimmed"
+            size="sm"
+            style={{ whiteSpace: "pre-line", lineHeight: 1.5 }}
+          >
+            {t("about.aboutText")}
           </Text>
+        </Card>
+        <Card withBorder shadow="sm" radius="md">
+          <Text fw={600}>{t("author.author")}</Text>
+          <Text c="dimmed" size="sm">
+            {t("author.authorText", { name: AUTHOR.name })}
+          </Text>
+
+          <Group gap="xs" mt="sm" wrap="wrap">
+            <Button
+              component="a"
+              href={`https://instagram.com/${AUTHOR.instagram}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="light"
+            >
+              {t("author.authorInstagram")}
+            </Button>
+
+            {AUTHOR.email && (
+              <Button
+                component="a"
+                href={`mailto:${AUTHOR.email}`}
+                variant="default"
+              >
+                {t("author.authorEmail")}
+              </Button>
+            )}
+          </Group>
         </Card>
       </Stack>
       <Modal

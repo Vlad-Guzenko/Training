@@ -84,8 +84,6 @@
     "clear": "Cancella dati",
     "copyClipboard": "Copia negli appunti",
     "storageSize": "Dimensione archiviazione:",
-    "about": "Informazioni",
-    "aboutText": "Tutto funziona in locale, i dati sono salvati nel tuo browser (localStorage).",
     "saved": "Salvato",
     "updatedCloud": "Dati salvati nel cloud",
     "error": "Errore",
@@ -193,5 +191,15 @@
     "closeMenu": "Chiudi menu",
     "switchToLightTheme": "Passa al tema chiaro",
     "switchToDarkTheme": "Passa al tema scuro"
+  },
+  "about": {
+    "about": "Informazioni",
+    "aboutText": "GooseFit è un planner e tracker per l’allenamento di forza. Funziona nel browser e offline (come PWA).\n\n• Archiviazione dati: di default su questo dispositivo (localStorage).\n• Sincronizzazione: opzionale con accesso Google; i dati restano nel tuo cloud (Firebase).\n• Controllo dei dati: esportazione/importazione JSON, reset locale o “ovunque”, eliminazione account.\n• Notifiche: solo interne all’app (niente push).\n• Privacy: nessuna pubblicità, nessuna vendita di dati. Usiamo Firebase solo per l’accesso e il salvataggio dei piani.\n• Disclaimer: l’app non è un dispositivo medico. Consulta un professionista prima di modificare il programma."
+  },
+  "author": {
+    "author": "Autore",
+    "authorText": "Sviluppato da {{name}}.",
+    "authorInstagram": "Instagram",
+    "authorEmail": "Email"
   }
 }
