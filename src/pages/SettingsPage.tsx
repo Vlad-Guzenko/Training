@@ -11,6 +11,7 @@ import {
   Badge,
   FileInput,
   Menu,
+  Modal,
 } from "@mantine/core";
 import { useMantineColorScheme } from "@mantine/core";
 import {
@@ -37,10 +38,18 @@ import {
 } from "@tabler/icons-react";
 import { cloudLoad, cloudSave } from "../lib/cloud";
 import type { PlanState } from "../types";
-import { onAuth, signInWithGoogle, signOutGoogle } from "../lib/firebase";
+import { db, onAuth, signInWithGoogle, signOutGoogle } from "../lib/firebase";
 import { useCloudSync } from "../lib/useCloudSync";
 import { SyncBadge } from "../components/SyncBadge";
 import { useTranslation } from "react-i18next";
+import {
+  clearIndexedDbPersistence,
+  terminate,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import { useDisclosure } from "@mantine/hooks";
+import { useMediaQuery } from "@mantine/hooks";
 
 export default function SettingsPage({
   state,
@@ -52,6 +61,7 @@ export default function SettingsPage({
   const theme = useMantineTheme();
   const [primary, setPrimary] = usePrimaryColor();
 
+  const SKIP_IMPORT_FLAG = "__wf_skip_local_import_once";
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const fileRef = useRef<File | null>(null);
   const [size, setSize] = useState(() => roughStorageSize());
@@ -59,7 +69,7 @@ export default function SettingsPage({
   const [user, setUser] = useState<import("firebase/auth").User | null>(null);
   useEffect(() => onAuth(setUser), []);
   const status = useCloudSync(state, setState);
-
+  const isPhone = useMediaQuery("(max-width: 480px)");
   const toggleScheme = () =>
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
 
@@ -167,7 +177,8 @@ export default function SettingsPage({
     }
   };
 
-  const handleClear = () => {
+  // Только на этом устройстве
+  const handleClearLocalPlan = () => {
     try {
       localStorage.removeItem(LS_KEY);
       setSize(roughStorageSize());
@@ -176,10 +187,40 @@ export default function SettingsPage({
         message: t("settings.stateCleared"),
         color: "orange",
       });
+      setTimeout(() => window.location.reload(), 300);
     } catch {
       notifications.show({
         title: t("settings.clearError"),
         message: t("settings.clearFail"),
+        color: "red",
+      });
+    }
+  };
+
+  // Везде: облако + это устройство
+  const handleClearPlanEverywhere = async () => {
+    if (!user) {
+      notifications.show({
+        title: t("settings.needLogin"),
+        message: t("settings.signInToClearCloud"),
+        color: "yellow",
+      });
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "data", "plan"));
+      localStorage.removeItem(LS_KEY);
+      setSize(roughStorageSize());
+      notifications.show({
+        title: t("settings.cleared"),
+        message: t("settings.stateClearedEverywhere"),
+        color: "red",
+      });
+      setTimeout(() => window.location.reload(), 300);
+    } catch {
+      notifications.show({
+        title: t("settings.clearError"),
+        message: t("settings.clearFailCloud"),
         color: "red",
       });
     }
@@ -211,6 +252,110 @@ export default function SettingsPage({
       autoClose: 1500,
     });
 
+  const handleSignOut = async () => {
+    try {
+      // 1) Выходим из аккаунта (Auth storage очистится)
+      await signOutGoogle();
+    } finally {
+      try {
+        // 2) Очищаем всё локальное состояние приложения
+        localStorage.clear(); // LS_KEY, i18nextLng, тема/цвет и т.д.
+      } catch {}
+
+      try {
+        // 3) Чистим оффлайн-кэш Firestore (IndexedDB)
+        // Важно: сначала terminate, затем clearIndexedDbPersistence
+        await terminate(db as any).catch(() => {});
+        await clearIndexedDbPersistence(db as any).catch(() => {});
+      } catch {}
+
+      try {
+        // 4) Чистим PWA CacheStorage (если сервис-воркер кэшировал ответы)
+        if ("caches" in window) {
+          const names = await caches.keys();
+          await Promise.all(names.map((n) => caches.delete(n)));
+        }
+      } catch {}
+
+      // 5) Полный сброс памяти приложения
+      window.location.reload();
+    }
+  };
+
+  function isMeaningfulPlan(obj: any): boolean {
+    if (!obj || typeof obj !== "object") return false;
+
+    // Явные поля, где точно появляются «реальные» данные
+    const candidates = [
+      obj?.history,
+      obj?.sessions,
+      obj?.exercises,
+      obj?.customExercises,
+      obj?.workouts,
+      obj?.plan?.exercises,
+      obj?.plan?.days,
+      obj?.weeks,
+    ].filter(Array.isArray) as any[];
+
+    if (candidates.some((a) => a.length > 0)) return true;
+
+    // Небольшой «глубокий» просмотр: если где-то в объекте есть непустой массив — считаем, что данные есть
+    const stack: any[] = [obj];
+    const seen = new Set<any>();
+    while (stack.length) {
+      const cur = stack.pop();
+      if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
+      seen.add(cur);
+      for (const k in cur) {
+        const v = cur[k];
+        if (Array.isArray(v)) {
+          if (v.length > 0) return true;
+        } else if (v && typeof v === "object") {
+          stack.push(v);
+        }
+      }
+    }
+
+    return false;
+  }
+
+  function hasLocalProgress(): boolean {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return false;
+      const t = raw.trim();
+      if (!t || t === "{}" || t === "null" || t === "undefined") return false;
+      const obj = JSON.parse(t);
+      return isMeaningfulPlan(obj); // <- ключевая проверка
+    } catch {
+      return false;
+    }
+  }
+
+  const [askOpen, { open: openAsk, close: closeAsk }] = useDisclosure(false);
+
+  const proceedImport = async () => {
+    closeAsk();
+    await signInWithGoogle();
+  };
+
+  const proceedFresh = async () => {
+    try {
+      localStorage.setItem(SKIP_IMPORT_FLAG, "1"); // чтобы useCloudSync не залил локальное
+      localStorage.removeItem(LS_KEY); // очистим локальный снапшот
+    } catch {}
+    closeAsk();
+    await signInWithGoogle();
+  };
+
+  const handleSignIn = async () => {
+    if (hasLocalProgress()) {
+      openAsk();
+      return;
+    }
+    await signInWithGoogle();
+  };
+
   return (
     <>
       <Title order={2} mb="sm">
@@ -239,14 +384,14 @@ export default function SettingsPage({
                 <Button
                   leftSection={<IconLogout size={16} />}
                   variant="default"
-                  onClick={signOutGoogle}
+                  onClick={handleSignOut}
                 >
                   {t("settings.signOut")}
                 </Button>
               ) : (
                 <Button
                   leftSection={<IconBrandGoogle size={16} />}
-                  onClick={signInWithGoogle}
+                  onClick={handleSignIn}
                 >
                   {t("settings.signInGoogle")}
                 </Button>
@@ -365,14 +510,25 @@ export default function SettingsPage({
               value={fileRef.current ? (fileRef.current as any) : null}
               clearable
             />
-            <Button
-              color="red"
-              variant="light"
-              leftSection={<IconTrash size={16} />}
-              onClick={handleClear}
-            >
-              {t("settings.clear")}
-            </Button>
+            <Menu withinPortal position="bottom-start">
+              <Menu.Target>
+                <Button
+                  color="red"
+                  variant="light"
+                  leftSection={<IconTrash size={16} />}
+                >
+                  {t("settings.clear")}
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item onClick={handleClearLocalPlan}>
+                  {t("settings.resetPlanLocal")}
+                </Menu.Item>
+                <Menu.Item color="red" onClick={handleClearPlanEverywhere}>
+                  {t("settings.resetPlanEverywhere")}
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
             <Button
               variant="default"
               leftSection={<IconClipboard size={16} />}
@@ -399,6 +555,57 @@ export default function SettingsPage({
           </Text>
         </Card>
       </Stack>
+      <Modal
+        opened={askOpen}
+        onClose={closeAsk}
+        centered
+        withinPortal
+        size={isPhone ? "sm" : "lg"}
+        radius="md"
+        zIndex={20000}
+        title={t("settings.signInChoiceTitle")}
+        overlayProps={{ opacity: 0.45, blur: 2, zIndex: 19999 }}
+        styles={{
+          body: {
+            paddingTop: 8,
+            paddingBottom: 8, // ← компактный низ без safe-area
+          },
+        }}
+      >
+        <Stack gap="md" style={{ paddingBottom: 0, marginBottom: 0 }}>
+          <Text size="sm" c="dimmed">
+            {t("settings.signInChoiceDesc")}
+          </Text>
+
+          {/* Desktop */}
+          <Group visibleFrom="sm" justify="space-between" wrap="nowrap">
+            <Button variant="default" onClick={closeAsk}>
+              {t("settings.signInChoiceCancel")}
+            </Button>
+            <Group gap="xs" wrap="nowrap">
+              <Button variant="outline" onClick={proceedFresh}>
+                {t("settings.signInChoiceFresh")}
+              </Button>
+              <Button onClick={proceedImport} autoFocus>
+                {t("settings.signInChoiceImport")}
+              </Button>
+            </Group>
+          </Group>
+
+          {/* Mobile */}
+          <Stack gap="xs" hiddenFrom="sm" style={{ marginBottom: 0 }}>
+            <Button fullWidth onClick={proceedImport}>
+              {t("settings.signInChoiceImport")}
+            </Button>
+            <Button variant="outline" fullWidth onClick={proceedFresh}>
+              {t("settings.signInChoiceFresh")}
+            </Button>
+            <Button variant="default" fullWidth onClick={closeAsk}>
+              {t("settings.signInChoiceCancel")}
+            </Button>
+          </Stack>
+        </Stack>
+      </Modal>
     </>
   );
 }

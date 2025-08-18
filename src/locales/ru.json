@@ -116,7 +116,18 @@
     "colorChanged": "Цвет изменён",
     "colorChangedMsg": "Теперь акцентный цвет — {{color}}",
     "loginToSync": "Войдите, чтобы синхронизировать данные",
-    "selectJsonToImport": "Выберите JSON для импорта"
+    "selectJsonToImport": "Выберите JSON для импорта",
+    "resetPlanLocal": "Сбросить план на устройстве",
+    "resetPlanEverywhere": "Сбросить везде (облако + устройство)",
+    "stateClearedEverywhere": "План очищен локально и в облаке",
+    "clearFailCloud": "Не удалось очистить данные в облаке",
+    "signInToClearCloud": "Войдите, чтобы очистить данные в облаке",
+    "signInChoiceTitle": "Вход в аккаунт",
+    "signInChoiceDesc": "Обнаружены локальные данные на этом устройстве. Что сделать при входе?",
+    "signInChoiceImport": "Импортировать локальные в облако",
+    "signInChoiceFresh": "Начать с нуля",
+    "signInChoiceCancel": "Отмена",
+    "signInImportConfirm": "Подтянуть текущие локальные данные в облако при входе?"
   },
   "history": {
     "title": "История",
@@ -175,7 +186,8 @@
     "synced": "Сохранено",
     "notSync": "Не сохранено",
     "offline": "Оффлайн",
-    "error": "Ошибка"
+    "error": "Ошибка",
+    "local": "Локально"
   },
   "a11y": {
     "openMenu": "Открыть меню",

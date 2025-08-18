@@ -116,7 +116,17 @@
     "colorChanged": "Colore modificato",
     "colorChangedMsg": "Ora il colore d'accento è {{color}}",
     "loginToSync": "Accedi per sincronizzare i tuoi dati",
-    "selectJsonToImport": "Seleziona JSON da importare"
+    "selectJsonToImport": "Seleziona JSON da importare",
+    "resetPlanLocal": "Reimposta il piano su questo dispositivo",
+    "resetPlanEverywhere": "Reimposta ovunque (cloud + dispositivo)",
+    "stateClearedEverywhere": "Piano reimpostato in locale e nel cloud",
+    "clearFailCloud": "Impossibile reimpostare i dati nel cloud",
+    "signInChoiceTitle": "Accesso all'account",
+    "signInChoiceDesc": "Sono stati trovati dati locali su questo dispositivo. Cosa fare all'accesso?",
+    "signInChoiceImport": "Importa i dati locali nel cloud",
+    "signInChoiceFresh": "Iniziare da zero",
+    "signInChoiceCancel": "Annulla",
+    "signInImportConfirm": "Importare i dati locali nel cloud durante l'accesso?"
   },
   "history": {
     "title": "Cronologia",
@@ -175,7 +185,8 @@
     "synced": "Salvato",
     "notSync": "Non salvato",
     "offline": "Offline",
-    "error": "Errore"
+    "error": "Errore",
+    "local": "Locale"
   },
   "a11y": {
     "openMenu": "Apri menu",

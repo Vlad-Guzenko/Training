@@ -238,3 +238,41 @@ body {
   right: 1rem !important;
   z-index: 99999 !important;
 }
+
+.mantine-Modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  /* сначала фолбэк (старые iOS/наш --app-vh), потом 100dvh, чтобы оно ПЕРЕБИЛО */
+  height: calc(var(--app-vh, 1vh) * 100) !important;
+}
+@supports (height: 100dvh) {
+  .mantine-Modal-overlay {
+    height: 100dvh !important;
+  }
+}
+
+/* 2.2. Если всё же используешь класс overlay-fullscreen — правильный порядок */
+.overlay-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: calc(var(--app-vh, 1vh) * 100) !important; /* сначала фолбэк */
+}
+@supports (height: 100dvh) {
+  .overlay-fullscreen {
+    height: 100dvh !important;
+  } /* потом 100dvh */
+}
+
+/* 2.3. Доп. димер именно нижней safe-area, если вдруг старый iOS */
+.safearea-dimmer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  z-index: 29998; /* ниже модалки */
+}

@@ -116,7 +116,18 @@
     "colorChanged": "Колір змінено",
     "colorChangedMsg": "Тепер акцентний колір — {{color}}",
     "loginToSync": "Увійдіть, щоб синхронізувати дані",
-    "selectJsonToImport": "Виберіть JSON для імпорту"
+    "selectJsonToImport": "Виберіть JSON для імпорту",
+    "resetPlanLocal": "Скинути план на пристрої",
+    "resetPlanEverywhere": "Скинути усюди (хмара + пристрій)",
+    "stateClearedEverywhere": "План скинуто локально та в хмарі",
+    "clearFailCloud": "Не вдалося скинути дані в хмарі",
+    "signInToClearCloud": "Увійдіть, щоб очистити дані в хмарі",
+    "signInChoiceTitle": "Вхід до облікового запису",
+    "signInChoiceDesc": "На цьому пристрої знайдено локальні дані. Що зробити під час входу?",
+    "signInChoiceImport": "Імпортувати локальні дані в хмару",
+    "signInChoiceFresh": "Почати з нуля",
+    "signInChoiceCancel": "Скасувати",
+    "signInImportConfirm": "Імпортувати поточні локальні дані в хмару під час входу?"
   },
   "history": {
     "title": "Історія",
@@ -175,7 +186,8 @@
     "synced": "Збережено",
     "notSync": "Не збережено",
     "offline": "Оффлайн",
-    "error": "Помилка"
+    "error": "Помилка",
+    "local": "Локально"
   },
   "a11y": {
     "openMenu": "Відкрити меню",

@@ -116,7 +116,17 @@
     "colorChanged": "Color changed",
     "colorChangedMsg": "Accent color is now {{color}}",
     "loginToSync": "Sign in to sync your data",
-    "selectJsonToImport": "Select JSON to import"
+    "selectJsonToImport": "Select JSON to import",
+    "resetPlanLocal": "Reset plan on this device",
+    "resetPlanEverywhere": "Reset everywhere (cloud + device)",
+    "stateClearedEverywhere": "Plan reset locally and in the cloud",
+    "clearFailCloud": "Failed to reset data in the cloud",
+    "signInChoiceTitle": "Sign in",
+    "signInChoiceDesc": "We found local data on this device. What would you like to do when signing in?",
+    "signInChoiceImport": "Import local data to cloud",
+    "signInChoiceFresh": "Start from scratch",
+    "signInChoiceCancel": "Cancel",
+    "signInImportConfirm": "Import the current local data to the cloud when signing in?"
   },
   "history": {
     "title": "History",
@@ -175,7 +185,8 @@
     "synced": "Saved",
     "notSync": "Not saved",
     "offline": "Offline",
-    "error": "Error"
+    "error": "Error",
+    "local": "Local"
   },
   "a11y": {
     "openMenu": "Open menu",
