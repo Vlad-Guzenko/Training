@@ -129,6 +129,8 @@
   },
   "history": {
     "title": "History",
+    "sessions": "Sessions",
+    "rpeAvg": "Avg RPE: {{value}}",
     "range": {
       "30d": "30d",
       "90d": "90d",
@@ -238,7 +240,7 @@
   },
   "about": {
     "about": "About",
-    "aboutText": "GooseFit is a simple strength-training planner & tracker. Works in the browser and offline (as a PWA).\n\n• Data storage: by default on this device (localStorage).\n• Sync: optional Google sign-in; your data lives in your own cloud (Firebase).\n• Data control: JSON export/import, reset locally or “everywhere”, delete account.\n• Notifications: in-app toasts only (no push).\n• Privacy: no ads, no data selling. Firebase is used solely for auth and storing your plans.\n• Disclaimer: this app is not a medical device. Consult a professional before changing your program."
+    "aboutText": "GooseFit is a simple training planner & tracker. Works in the browser and offline (as a PWA).\n\n• Data storage: by default on this device (localStorage).\n• Sync: optional Google sign-in; your data lives in your own cloud (Firebase).\n• Data control: JSON export/import, reset locally or “everywhere”, delete account.\n• Notifications: in-app toasts only (no push).\n• Privacy: no ads, no data selling. Firebase is used solely for auth and storing your plans.\n• Disclaimer: this app is not a medical device. Consult a professional before changing your program."
   },
   "author": {
     "author": "Author",

@@ -25,9 +25,13 @@ import {
   IconLanguage,
   IconCheck,
   IconTarget,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { usePrefsSync } from "./lib/usePrefsSync";
+import { onAuthStateChanged } from "firebase/auth";
+import { notifications } from "@mantine/notifications";
+import { auth } from "./lib/firebase";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { t, i18n } = useTranslation(); // подписка на смену языка
@@ -85,6 +89,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const toggleColorScheme = () =>
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
+
+  const [authed, setAuthed] = useState(false);
+  useEffect(() => onAuthStateChanged(auth, (u) => setAuthed(!!u)), []);
+
+  const blockIfGuest = () =>
+    notifications.show({
+      title: t("auth.signInRequired", { defaultValue: "Требуется вход" }),
+      message: t("auth.pleaseSignIn", {
+        defaultValue: "Войдите, чтобы использовать цели.",
+      }),
+      color: "yellow",
+    });
 
   const HEADER_H = 56;
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
@@ -172,6 +188,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             leftSection={<IconHome size={18} />}
             onClick={() => setOpened(false)}
           />
+          {authed ? (
+            <NavLink
+              component={RouterLink}
+              to="/goals"
+              label={t("goals.title")}
+              active={isActive("/goals")}
+              leftSection={<IconTarget size={18} />}
+              onClick={() => setOpened(false)}
+            />
+          ) : (
+            <NavLink
+              label={t("goals.title")}
+              leftSection={<IconTarget size={18} />}
+              onClick={blockIfGuest}
+              aria-disabled
+              styles={{
+                root: { opacity: 0.45, cursor: "not-allowed" },
+              }}
+            />
+          )}
           <NavLink
             component={RouterLink}
             to="/exercises"
@@ -180,14 +216,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             leftSection={<IconWeight size={18} />}
             onClick={() => setOpened(false)}
           />
-          <NavLink
-            component={RouterLink}
-            to="/goals"
-            label={t("goals.title")}
-            active={isActive("/goals")}
-            leftSection={<IconTarget size={18} />}
-            onClick={() => setOpened(false)}
-          />
+
           <NavLink
             component={RouterLink}
             to="/history"
@@ -210,6 +239,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             label={t("settings.title")}
             active={isActive("/settings")}
             leftSection={<IconSettings size={18} />}
+            onClick={() => setOpened(false)}
+          />
+          <NavLink
+            component={RouterLink}
+            to="/about"
+            label={t("about.about")}
+            active={isActive("/about")}
+            leftSection={<IconInfoCircle size={18} />}
             onClick={() => setOpened(false)}
           />
         </ScrollArea>

@@ -14,6 +14,8 @@ import { loadState, saveState } from "./lib/workout";
 import { useCloudSync } from "./lib/useCloudSync";
 import { usePrefsSync } from "./lib/usePrefsSync";
 import { useGoalAutoProgress } from "./features/goals/api/useGoalAutoProgress";
+import AboutPage from "./pages/AboutPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   const saved = loadState();
@@ -68,12 +70,16 @@ export default function App() {
             element={<PlanPage state={state} setState={setState} />}
           />
           <Route
-            path="/exercises"
-            element={<ExercisesPage state={state} setState={setState} />}
+            path="/goals"
+            element={
+              <ProtectedRoute>
+                <GoalsPage state={state} setState={setState} />
+              </ProtectedRoute>
+            }
           />
           <Route
-            path="/goals"
-            element={<GoalsPage state={state} setState={setState} />}
+            path="/exercises"
+            element={<ExercisesPage state={state} setState={setState} />}
           />
           <Route path="/history" element={<HistoryPage state={state} />} />
           <Route
@@ -84,6 +90,7 @@ export default function App() {
             path="/settings"
             element={<SettingsPage state={state} setState={setState} />}
           />
+          <Route path="/about" element={<AboutPage />} />
         </Routes>
       </Container>
     </Layout>

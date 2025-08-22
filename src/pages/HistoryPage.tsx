@@ -214,14 +214,16 @@ export default function HistoryPage({ state }: { state: PlanState }) {
           {t("history.filter." + filter, { defaultValue: filter })}
         </Text>
         <Text size="sm" c="dimmed">
-          {t("common.sessions", { defaultValue: "Sessions" })}: {stats.count}
+          {t("history.sessions", { defaultValue: "Sessions" })}: {stats.count}
         </Text>
         <Text size="sm" c="dimmed">
-          {t("common.volume", { defaultValue: "Volume" })}: {stats.volume}
+          {t("history.volume", { defaultValue: "Volume" })}: {stats.volume}
         </Text>
         <Text size="sm" c="dimmed">
-          {t("common.rpeAvg", { defaultValue: "Avg RPE" })}:{" "}
-          {stats.rpeAvg ?? "—"}
+          {t("history.rpeAvg", {
+            value: stats.rpeAvg ?? "—",
+            defaultValue: "Avg RPE: {{value}}",
+          })}
         </Text>
       </Group>
 

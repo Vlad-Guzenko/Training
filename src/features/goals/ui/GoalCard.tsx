@@ -1,4 +1,4 @@
-// src/features/goals/ui/GoalCard.tsx
+import { useState } from "react";
 import {
   ActionIcon,
   Badge,
@@ -10,6 +10,7 @@ import {
   Stack,
   Text,
   Tooltip,
+  Modal,
   useMantineTheme,
   useMantineColorScheme,
 } from "@mantine/core";
@@ -23,7 +24,7 @@ type Props = {
   isActive: boolean;
   onSuggest: (g: Goal) => void;
   onMakeActive: (g: Goal) => void;
-  onDelete: (g: Goal) => void;
+  onDelete: (g: Goal) => void; // ← тут теперь ожидаем ПРЯМОЕ удаление (без своих модалок)
 };
 
 export default function GoalCard({
@@ -38,7 +39,19 @@ export default function GoalCard({
   const { colorScheme } = useMantineColorScheme();
   const isDark = colorScheme === "dark";
 
-  // типобезопасный акцент
+  // локальная модалка подтверждения удаления
+  const [delOpen, setDelOpen] = useState(false);
+  const openDel = (e?: React.MouseEvent) => {
+    e?.stopPropagation?.();
+    e?.preventDefault?.();
+    setDelOpen(true);
+  };
+  const closeDel = () => setDelOpen(false);
+  const confirmDel = () => {
+    closeDel();
+    onDelete(g);
+  };
+
   const primaryKey: keyof typeof theme.colors =
     theme.primaryColor in theme.colors
       ? (theme.primaryColor as keyof typeof theme.colors)
@@ -53,7 +66,7 @@ export default function GoalCard({
       shadow="sm"
       style={{
         display: "grid",
-        gridTemplateRows: "auto 1fr auto", // header • content • footer
+        gridTemplateRows: "auto 1fr auto",
         background: isDark
           ? "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))"
           : "linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.01))",
@@ -63,7 +76,7 @@ export default function GoalCard({
           "transform .12s ease, box-shadow .12s ease, border-color .12s ease",
       }}
     >
-      {/* HEADER — флекс с бейджем справа, без absolute */}
+      {/* HEADER */}
       <Box mb="xs">
         <Group
           justify="space-between"
@@ -87,7 +100,7 @@ export default function GoalCard({
               style={{
                 flex: "0 0 auto",
                 whiteSpace: "nowrap",
-                marginRight: 2, // чуть отступить от скругления
+                marginRight: 6,
                 marginTop: 2,
               }}
             >
@@ -117,8 +130,7 @@ export default function GoalCard({
 
       <Divider my="md" />
 
-      {/* FOOTER — два варианта с теми же брейкпоинтами Mantine */}
-      {/* Desktop/tablet ≥ sm */}
+      {/* FOOTER — desktop/tablet */}
       <Group
         gap="sm"
         mt="auto"
@@ -141,14 +153,15 @@ export default function GoalCard({
             variant="subtle"
             color="red"
             aria-label={t("common.delete") as string}
-            onClick={() => onDelete(g)}
+            onClick={openDel}
+            style={{ marginRight: 4 }}
           >
             <IconTrash size={18} />
           </ActionIcon>
         </Tooltip>
       </Group>
 
-      {/* Mobile < sm */}
+      {/* FOOTER — mobile */}
       <Stack gap="xs" mt="auto" hiddenFrom="sm">
         <Button
           variant={isActive ? "light" : "default"}
@@ -163,11 +176,35 @@ export default function GoalCard({
           color="red"
           fullWidth
           leftSection={<IconTrash size={16} />}
-          onClick={() => onDelete(g)}
+          onClick={openDel}
         >
           {t("common.delete")}
         </Button>
       </Stack>
+
+      {/* LOCAL CONFIRM MODAL */}
+      <Modal
+        opened={delOpen}
+        onClose={closeDel}
+        centered
+        title={t("goals.deleteTitle", { defaultValue: "Удалить цель?" })}
+      >
+        <Text size="sm">
+          {t("goals.confirmDelete", {
+            name: g.name,
+            defaultValue: `Удалить цель «${g.name}»? Это действие необратимо.`,
+          })}
+        </Text>
+
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={closeDel}>
+            {t("common.cancel", { defaultValue: "Отмена" })}
+          </Button>
+          <Button color="red" onClick={confirmDel}>
+            {t("common.delete", { defaultValue: "Удалить" })}
+          </Button>
+        </Group>
+      </Modal>
     </Card>
   );
 }

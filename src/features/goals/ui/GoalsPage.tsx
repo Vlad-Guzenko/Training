@@ -43,8 +43,8 @@ export default function GoalsPage({
   const [sugGoal, setSugGoal] = useState<Goal | null>(null);
   const [sugList, setSugList] = useState<Exercise[]>([]);
   const autoOpenedRef = useRef(false);
-
   const [authed, setAuthed] = useState(false);
+
   useEffect(() => {
     const off = onAuthStateChanged(auth, (u) => setAuthed(!!u));
     return () => off();
@@ -55,7 +55,15 @@ export default function GoalsPage({
       setItems([]);
       return;
     }
-    const unsub = subscribeGoals((gs) => setItems(gs));
+    const unsub = subscribeGoals((gs) => {
+      const rank = (g: Goal) => (g.status === "active" ? 0 : 1);
+      const sorted = [...gs].sort((a, b) => {
+        const byActive = rank(a) - rank(b);
+        if (byActive !== 0) return byActive;
+        return createdAtMs(b) - createdAtMs(a);
+      });
+      setItems(sorted);
+    });
     return () => unsub && unsub();
   }, [authed]);
 
@@ -74,8 +82,17 @@ export default function GoalsPage({
         openSug();
       } catch {}
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, state.exercises.length]);
+
+  const createdAtMs = (g: Goal): number => {
+    const v: any = (g as any).createdAt;
+    if (!v) return 0;
+    if (typeof v === "number") return v;
+    if (typeof v === "string") return Date.parse(v) || 0;
+    if (v instanceof Date) return v.getTime();
+    if (typeof v?.toMillis === "function") return v.toMillis(); // Firestore Timestamp
+    return 0;
+  };
 
   const openSuggestFor = (g: Goal) => {
     setSugGoal(g);
@@ -112,32 +129,16 @@ export default function GoalsPage({
     openSuggestFor(g);
   };
 
-  const handleDelete = (g: Goal) => {
-    modals.openConfirmModal({
-      title: t("goals.confirmTitle") as string,
-      children: (
-        <Text size="sm">
-          {t("goals.confirmDelete", { name: g.name }) as string}
-        </Text>
-      ),
-      labels: {
-        confirm: t("common.delete") as string,
-        cancel: t("common.cancel") as string,
-      },
-      confirmProps: { color: "red" },
-      onConfirm: async () => {
-        try {
-          await deleteGoal(g.id);
-        } catch (e) {
-          console.warn("[goals] delete error", e);
-        }
-      },
-    });
+  const handleDelete = async (g: Goal) => {
+    try {
+      await deleteGoal(g.id);
+    } catch (e) {
+      console.warn("[goals] delete error", e);
+    }
   };
 
   return (
     <Stack>
-      {/* Заголовок: на десктопе кнопка справа; на мобиле — отдельной строкой fullWidth */}
       <Group justify="space-between" wrap="nowrap">
         <Title order={2}>{t("goals.title")}</Title>
         {authed && (
@@ -171,7 +172,6 @@ export default function GoalsPage({
         </Card>
       ) : (
         <>
-          {/* Адаптивная сетка: 1 колонка на телефоне, 2 — на планшете, 3 — на больших экранах */}
           <SimpleGrid
             cols={{ base: 1, sm: 2, lg: 3 }}
             spacing={{ base: "md", sm: "lg" }}
@@ -197,7 +197,6 @@ export default function GoalsPage({
               openSuggestFor(g);
             }}
           />
-
           <SuggestedWorkoutModal
             opened={openedSug}
             onClose={closeSug}
