@@ -1,7 +1,8 @@
 // src/pages/SettingsPage.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActionIcon,
+  Anchor,
   Avatar,
   Badge,
   Button,
@@ -19,11 +20,10 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import {
+  IconAlertTriangle,
   IconBell,
   IconBrandGoogle,
   IconClipboard,
-  IconCloudDown,
-  IconCloudUp,
   IconDownload,
   IconLogout,
   IconMoonStars,
@@ -36,19 +36,25 @@ import { useTranslation } from "react-i18next";
 
 import { LS_KEY } from "../lib/workout";
 import { usePrimaryColor } from "../lib/usePrimaryColor";
-import { cloudLoad, cloudSave } from "../lib/cloud";
 import type { PlanState } from "../types";
 import { db, onAuth, signInWithGoogle, signOutGoogle } from "../lib/firebase";
 import { useCloudSync } from "../lib/useCloudSync";
 import { SyncBadge } from "../components/SyncBadge";
 import {
   clearIndexedDbPersistence,
+  collection,
   deleteDoc,
   doc,
+  getDocs,
   terminate,
 } from "firebase/firestore";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { modalSafeProps } from "../lib/modalSafe";
+import {
+  deleteUser,
+  GoogleAuthProvider,
+  reauthenticateWithPopup,
+} from "firebase/auth";
 
 export default function SettingsPage({
   state,
@@ -60,12 +66,132 @@ export default function SettingsPage({
   const theme = useMantineTheme();
   const [primary, setPrimary] = usePrimaryColor();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
-  const fileRef = useRef<File | null>(null);
   const [size, setSize] = useState(() => roughStorageSize());
   const [signoutOpen, signout] = useDisclosure(false);
+  const [delOpen, del] = useDisclosure(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [user, setUser] = useState<import("firebase/auth").User | null>(null);
   const isPhone = useMediaQuery("(max-width: 480px)");
   const { t } = useTranslation();
+
+  // ---- helpers --------------------------------------------------------------
+
+  async function wipeLocalAndReload() {
+    try {
+      localStorage.clear();
+    } catch {}
+    try {
+      await terminate(db as any).catch(() => {});
+      await clearIndexedDbPersistence(db as any).catch(() => {});
+    } catch {}
+    try {
+      if ("caches" in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      }
+    } catch {}
+    window.location.reload();
+  }
+
+  async function deleteUserData(uid: string) {
+    // 1) data/*
+    try {
+      await deleteDoc(doc(db, "users", uid, "data", "plan")).catch(() => {});
+      await deleteDoc(doc(db, "users", uid, "data", "prefs")).catch(() => {});
+    } catch {}
+
+    // 2) workouts/* и их subcollection sessions/*
+    try {
+      const workoutsRef = collection(db, "users", uid, "workouts");
+      const workoutsSnap = await getDocs(workoutsRef);
+      for (const w of workoutsSnap.docs) {
+        const sessionsRef = collection(
+          db,
+          "users",
+          uid,
+          "workouts",
+          w.id,
+          "sessions"
+        );
+        const sessionsSnap = await getDocs(sessionsRef);
+        await Promise.all(
+          sessionsSnap.docs.map((d) => deleteDoc(d.ref).catch(() => {}))
+        );
+        await deleteDoc(w.ref).catch(() => {});
+      }
+    } catch {}
+
+    // 3) goals/*
+    try {
+      const goalsRef = collection(db, "users", uid, "goals");
+      const goalsSnap = await getDocs(goalsRef);
+      await Promise.all(
+        goalsSnap.docs.map((d) => deleteDoc(d.ref).catch(() => {}))
+      );
+    } catch {}
+
+    // 4) корневой документ (если используешь)
+    try {
+      await deleteDoc(doc(db, "users", uid)).catch(() => {});
+    } catch {}
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!user) {
+      notifications.show({
+        title: t("settings.needLogin", { defaultValue: "Sign in required" }),
+        message: t("settings.signInToDelete", {
+          defaultValue: "Please sign in to delete your account",
+        }),
+        color: "yellow",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteUserData(user.uid);
+
+      try {
+        await deleteUser(user);
+      } catch (e: any) {
+        if (e?.code === "auth/requires-recent-login") {
+          const provider = new GoogleAuthProvider();
+          await reauthenticateWithPopup(user, provider);
+          await deleteUser(user);
+        } else {
+          throw e;
+        }
+      }
+
+      notifications.show({
+        title: t("settings.accountDeletedTitle", {
+          defaultValue: "Account deleted",
+        }),
+        message: t("settings.accountDeletedMsg", {
+          defaultValue: "All your data has been removed",
+        }),
+        color: "red",
+      });
+
+      // Шаг 3: локальный wipe и перезагрузка
+      await wipeLocalAndReload();
+    } catch {
+      notifications.show({
+        title: t("settings.deleteErrorTitle", {
+          defaultValue: "Delete failed",
+        }),
+        message: t("settings.deleteErrorMsg", {
+          defaultValue: "We couldn't delete your account. Try again.",
+        }),
+        color: "red",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // ---- effects --------------------------------------------------------------
 
   // подгружаем фото после логина (у Google иногда появится на второй тик)
   useEffect(() => {
@@ -86,51 +212,6 @@ export default function SettingsPage({
   const toggleScheme = () =>
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
 
-  const saveCloud = async () => {
-    try {
-      await cloudSave(state);
-      notifications.show({
-        title: t("settings.saved"),
-        message: t("settings.updatedCloud"),
-        color: "teal",
-      });
-    } catch (e: any) {
-      notifications.show({
-        title: t("settings.error"),
-        message: e?.message || t("settings.needLogin"),
-        color: "red",
-      });
-    }
-  };
-
-  const loadCloud = async () => {
-    try {
-      const data = await cloudLoad();
-      if (data) {
-        setState(data);
-        localStorage.setItem(LS_KEY, JSON.stringify(data));
-        setSize(roughStorageSize());
-        notifications.show({
-          title: t("settings.loaded"),
-          message: t("settings.pulledFromCloud"),
-          color: "teal",
-        });
-      } else {
-        notifications.show({
-          title: t("settings.empty"),
-          message: t("settings.noCloud"),
-          color: "yellow",
-        });
-      }
-    } catch (e: any) {
-      notifications.show({
-        title: t("settings.error"),
-        message: e?.message || t("settings.needLogin"),
-        color: "red",
-      });
-    }
-  };
-
   function roughStorageSize() {
     try {
       const raw = localStorage.getItem(LS_KEY) || "";
@@ -139,6 +220,8 @@ export default function SettingsPage({
       return 0;
     }
   }
+
+  // ---- handlers -------------------------------------------------------------
 
   const handleExport = () => {
     try {
@@ -265,26 +348,15 @@ export default function SettingsPage({
     try {
       await signOutGoogle();
     } finally {
-      try {
-        localStorage.clear();
-      } catch {}
-      try {
-        await terminate(db as any).catch(() => {});
-        await clearIndexedDbPersistence(db as any).catch(() => {});
-      } catch {}
-      try {
-        if ("caches" in window) {
-          const names = await caches.keys();
-          await Promise.all(names.map((n) => caches.delete(n)));
-        }
-      } catch {}
-      window.location.reload();
+      await wipeLocalAndReload();
     }
   };
 
   const handleSignIn = async () => {
     await signInWithGoogle();
   };
+
+  // ---- render ---------------------------------------------------------------
 
   return (
     <>
@@ -346,25 +418,6 @@ export default function SettingsPage({
               )}
             </Group>
           </Group>
-
-          <Divider my="sm" />
-          <Group wrap="wrap" gap="sm">
-            <Button
-              leftSection={<IconCloudUp size={16} />}
-              onClick={saveCloud}
-              disabled={!user}
-            >
-              {t("settings.cloudSave")}
-            </Button>
-            <Button
-              leftSection={<IconCloudDown size={16} />}
-              onClick={loadCloud}
-              variant="default"
-              disabled={!user}
-            >
-              {t("settings.cloudLoad")}
-            </Button>
-          </Group>
         </Card>
 
         <Card withBorder shadow="sm" radius="md">
@@ -381,7 +434,7 @@ export default function SettingsPage({
                   notifications.show({
                     title: t("settings.colorChanged"),
                     message: t("settings.colorChangedMsg", { color }),
-                    color: color,
+                    color: color as any,
                   });
                 }}
                 style={{
@@ -449,30 +502,15 @@ export default function SettingsPage({
             >
               {t("settings.export")}
             </Button>
+
             <FileInput
               placeholder={t("settings.selectJsonToImport")}
               leftSection={<IconUpload size={16} />}
               accept="application/json"
               onChange={handleImport}
-              value={fileRef.current ? (fileRef.current as any) : null}
               clearable
             />
-            <Button
-              color="red"
-              variant="light"
-              leftSection={<IconTrash size={16} />}
-              onClick={handleClearLocalPlan}
-            >
-              {t("settings.resetPlanLocal")}
-            </Button>
-            <Button
-              color="red"
-              variant="subtle"
-              leftSection={<IconTrash size={16} />}
-              onClick={handleClearPlanEverywhere}
-            >
-              {t("settings.resetPlanEverywhere")}
-            </Button>
+
             <Button
               variant="default"
               leftSection={<IconClipboard size={16} />}
@@ -492,6 +530,36 @@ export default function SettingsPage({
         </Card>
       </Stack>
 
+      {/* Danger zone */}
+      <Card
+        withBorder
+        radius="md"
+        styles={{ root: { borderColor: theme.colors.red[6] } }}
+        mt="lg"
+      >
+        <Stack gap="xs">
+          <Text fw={700} c="red">
+            Опасная зона
+          </Text>
+          <Text size="sm" c="dimmed">
+            Необратимые действия. Перед удалением вы можете{" "}
+            <Anchor onClick={handleExport}>экспортировать данные</Anchor>.
+          </Text>
+          <Group wrap="wrap">
+            <Button
+              variant="light"
+              color="red"
+              onClick={handleClearPlanEverywhere}
+            >
+              Сбросить везде
+            </Button>
+            <Button color="red" onClick={del.open}>
+              Удалить аккаунт
+            </Button>
+          </Group>
+        </Stack>
+      </Card>
+
       {/* Подтверждение выхода */}
       <Modal
         {...modalSafeProps}
@@ -503,12 +571,7 @@ export default function SettingsPage({
         overlayProps={{ ...modalSafeProps.overlayProps, opacity: 0.55 }}
       >
         <Stack gap="sm">
-          <Text size="sm">
-            {t("settings.signOutConfirmText", {
-              defaultValue:
-                "You will be signed out, and cache/local data on this device will be cleared.",
-            })}
-          </Text>
+          <Text size="sm">{t("settings.signOutConfirmText")}</Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={signout.close}>
               {t("common.cancel")}
@@ -521,6 +584,53 @@ export default function SettingsPage({
               }}
             >
               {t("settings.signOut")}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/*Модалка удаления аккаунта*/}
+      <Modal
+        opened={delOpen}
+        onClose={del.close}
+        centered // ⬅️ по центру экрана
+        size={isPhone ? "sm" : "md"}
+        withinPortal
+        portalProps={{
+          target: typeof document !== "undefined" ? document.body : undefined,
+        }}
+        lockScroll
+        trapFocus
+        overlayProps={{
+          ...modalSafeProps.overlayProps,
+          opacity: 0.55,
+          zIndex: 1000,
+        }}
+        zIndex={2000}
+        title={
+          <Group gap="xs" align="center">
+            <IconAlertTriangle size={18} color={theme.colors.red[6]} />
+            <Text size="sm">{t("settings.deleteAccountTitle")}</Text>
+          </Group>
+        }
+      >
+        <Stack gap="sm">
+          <Text size="sm">{t("settings.deleteAccountText")}</Text>
+
+          <Group justify="flex-end">
+            <Button variant="default" onClick={del.close}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              color="red"
+              leftSection={<IconTrash size={16} />}
+              loading={isDeleting}
+              onClick={async () => {
+                del.close();
+                await handleDeleteAccount();
+              }}
+            >
+              {t("settings.deleteForever")}
             </Button>
           </Group>
         </Stack>

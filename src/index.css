@@ -328,3 +328,74 @@ body {
     ) !important;
   }
 }
+/* === ГЛОБАЛЬНЫЙ ОВЕРЛЕЙ ПОВЕРХ ВСЕГО ПРИ ОТКРЫТОЙ МОДАЛКЕ === */
+html.modal-open::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh; /* критично для iOS */
+  background: rgba(0, 0, 0, 0.62);
+  pointer-events: auto; /* блокируем клики по фону */
+  z-index: 2147483639; /* очень высоко */
+}
+
+/* Модалка всегда выше глобального слоя */
+.mantine-Modal-root {
+  z-index: 2147483646 !important;
+}
+.mantine-Portal {
+  z-index: 2147483645 !important;
+}
+
+/* На время модалки:
+   1) убираем нижний safe-area padding
+   2) не даём детям «выпрыгнуть» z-index'ом */
+
+/* Не создаём лишних стэков при открытой модалке */
+html.modal-open .mantine-Notifications-root {
+  z-index: 2147483644 !important; /* ниже модалки, но выше фона */
+}
+
+/* ВАЖНО: не применяем transform к html/body — это ломает stacking на iOS */
+html.ios-pwa,
+html.ios-pwa body {
+  /* УБРАТЬ translateZ(0) И transform отсюда */
+  transform: none !important;
+}
+
+/* Базовая изоляция на корне, чтобы дети не прыгали выше */
+#root {
+  isolation: isolate;
+  min-height: 100dvh;
+}
+/* хедер всегда поверх контента, без изменения его геометрии */
+.mantine-AppShell-header {
+  z-index: 5000 !important; /* > любого карточного контента */
+  isolation: isolate; /* свой stacking context */
+}
+
+/* контент ниже по стэку (геометрию не трогаем) */
+.mantine-AppShell-main {
+  z-index: 0 !important;
+  position: relative; /* чтобы z-index применился */
+}
+
+/* для iOS-PWA мы не трогаем transform на html/body (он уже отключён),
+   поэтому никакой новый stacking-context не создаётся */
+/* Перекрытие зоны над хедером (статус-бар/вырез) */
+.safe-top-veil {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  /* На iOS это >0, в остальных 0 — плашка исчезнет сама */
+  height: calc(
+    env(safe-area-inset-top, 0px) + 1px
+  ); /* +1px чтобы не было щели */
+
+  background: var(--mantine-color-body); /* тот же фон, что у хедера */
+  z-index: 5999; /* ниже самого хедера, выше контента */
+  pointer-events: none; /* не перехватывает тапы/скролл */
+}

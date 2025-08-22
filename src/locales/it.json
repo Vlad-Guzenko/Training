@@ -128,7 +128,10 @@
     "signInChoiceCancel": "Annulla",
     "signInImportConfirm": "Importare i dati locali nel cloud durante l'accesso?",
     "signOutConfirmTitle": "Uscire dall'account?",
-    "signOutConfirmText": "Verrai disconnesso e la cache e i dati locali su questo dispositivo verranno eliminati."
+    "signOutConfirmText": "Verrai disconnesso e la cache e i dati locali su questo dispositivo verranno eliminati.",
+    "deleteAccountTitle": "Eliminare account?",
+    "deleteForever": "Eliminare per sempre",
+    "deleteAccountText": "Questa operazione eliminerà definitivamente il tuo account e tutti i dati (locali e nel cloud). Questa azione non può essere annullata."
   },
   "history": {
     "title": "Cronologia",

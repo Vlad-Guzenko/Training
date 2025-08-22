@@ -128,7 +128,10 @@
     "signInChoiceCancel": "Cancel",
     "signInImportConfirm": "Import the current local data to the cloud when signing in?",
     "signOutConfirmTitle": "Sign out?",
-    "signOutConfirmText": "You’ll be signed out, and the cache and local data on this device will be deleted."
+    "signOutConfirmText": "You’ll be signed out, and the cache and local data on this device will be deleted.",
+    "deleteAccountTitle": "Delete account?",
+    "deleteForever": "Delete forever",
+    "deleteAccountText": "This will permanently delete your account and all data (local and cloud). This action cannot be undone."
   },
   "history": {
     "title": "History",

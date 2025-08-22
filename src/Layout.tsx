@@ -108,8 +108,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       }}
       padding="md"
     >
+      <Box className="safe-top-veil" aria-hidden="true" />
       {/* HEADER (fixed AppShell-ом) */}
-      <AppShell.Header withBorder>
+      <AppShell.Header
+        withBorder
+        style={{
+          zIndex: 6000,
+          background: "var(--mantine-color-body)", // глухой фон, чтобы не просвечивало
+          transform: "translateZ(0)", // отдельный слой для iOS
+          willChange: "transform",
+        }}
+      >
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <Group gap="sm" wrap="nowrap">
             <Burger
@@ -310,6 +319,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         style={{
           paddingTop: `calc(${SAFE_TOP} + var(--mantine-spacing-md, 16px))`,
           paddingBottom: `calc(${SAFE_BOTTOM} + var(--mantine-spacing-md, 16px))`,
+          position: "relative",
+          zIndex: 0,
         }}
       >
         <Box mx="auto">{children}</Box>
