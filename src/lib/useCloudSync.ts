@@ -4,6 +4,7 @@ import { onAuth } from "../lib/firebase";
 import { loadPlanSnapshot, savePlanSnapshot } from "./cloudNormalized";
 import type { PlanState } from "../types";
 import { LS_KEY } from "../lib/workout";
+import { safeStorage } from "./safeStorage";
 
 export type SyncStatus =
   | "saved"
@@ -18,20 +19,25 @@ const SKIP_IMPORT_FLAG = "__wf_skip_local_import_once";
 function nowMs() {
   return Date.now();
 }
+
 function metaKey(uid: string) {
   return `workout-plan-meta-${uid}`;
 }
+
 function getMeta(uid: string) {
   try {
-    return JSON.parse(localStorage.getItem(metaKey(uid)) || "{}") as {
+    return safeStorage.get<{ updatedAtLocal?: number }>(metaKey(uid), {}) as {
       updatedAtLocal?: number;
     };
   } catch {
     return {};
   }
 }
-function setMeta(uid: string, m: { updatedAtLocal: number }) {
-  localStorage.setItem(metaKey(uid), JSON.stringify(m));
+
+function setMeta(uid: string, meta: { updatedAtLocal?: number }) {
+  try {
+    safeStorage.set(metaKey(uid), meta);
+  } catch {}
 }
 
 /** «Осмысленный» план: где-то есть непустой массив (не пустой скелет) */
@@ -177,7 +183,7 @@ export function useCloudSync(
     const uid = uidRef.current;
 
     // не сохраняем «скелет» на самый первый старт (чтобы не плодить "данные из воздуха")
-    const hadLS = !!localStorage.getItem(LS_KEY);
+    const hadLS = !!safeStorage.get(LS_KEY);
     const meaningful = isMeaningfulPlan(state);
     if (!meaningful && !hadLS) {
       setStatus(uid ? "saved" : "hidden");

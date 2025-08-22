@@ -556,7 +556,7 @@ export default function SettingsPage({
             size="sm"
             style={{ whiteSpace: "pre-line", lineHeight: 1.5 }}
           >
-            {t("about.aboutText")}
+            {t("author.aboutText")}
           </Text>
         </Card>
         <Card withBorder shadow="sm" radius="md">

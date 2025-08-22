@@ -31,7 +31,8 @@
     "newExercise": "Nuovo esercizio",
     "planCopied": "Piano copiato",
     "clipboardFallback": "Appunti non disponibili — scaricato .txt",
-    "addExerciseFrom": "Aggiungi esercizi nella scheda \"Esercizi\" a sinistra."
+    "addExerciseFrom": "Aggiungi esercizi nella scheda \"Esercizi\" a sinistra.",
+    "goalMode": "Modalità obiettivo: {{name}}"
   },
   "exercises": {
     "title": "Esercizi",
@@ -135,10 +136,53 @@
       "12m": "12m",
       "all": "Tutto"
     },
+    "filter": {
+      "all": "Tutte",
+      "goals": "Obiettivi",
+      "general": "Generali"
+    },
+    "badge": {
+      "goal": "Obiettivo: {{name}}"
+    },
     "volume": "Volume",
     "progress": "Progressi in volume",
     "noData": "Nessun dato ancora. Completa almeno una sessione e il grafico prenderà vita.",
     "howToRead": "<b>Come leggere il grafico:</b><br/><solid>Linea continua</solid> — volume per sessione.<br/><dashed>Tratteggio</dashed> — media mobile (MA{{maWindow}}) per rendere il trend più stabile.<br/><pr>Punti verdi</pr> — record personali (PR) al momento della sessione.<br/>Sopra scegli l’intervallo (30/90 giorni, 6/12 mesi o tutto). Il cursore in basso permette di scorrere e fare zoom. Passa il mouse sul punto per vedere data, RPE e volume."
+  },
+  "goals": {
+    "title": "Obiettivi",
+    "new": "Nuovo obiettivo",
+    "defaultName": "Il mio obiettivo",
+    "name": "Nome",
+    "domainLabel": "Dominio",
+    "metricLabel": "Metrica",
+    "target": "Target",
+    "weeks": "Settimane",
+    "weeksShort": "{{n}} sett.",
+    "freqPerWeek": "Sessioni/settimana",
+    "intensity": "Intensità",
+    "intensityLevel": { "easy": "Facile", "base": "Base", "hard": "Dura" },
+    "eta": "ETA",
+    "etaLabel": "Completamento stimato",
+    "etaUnknown": "sconosciuto",
+    "suggest": "Suggerisci allenamento",
+    "preview": "Anteprima allenamento",
+    "suggestedFor": "Suggerito per: {{name}}",
+    "addToPlan": "Aggiungi al piano",
+    "replacePlan": "Sostituisci piano",
+    "active": "Attivo",
+    "makeActive": "Imposta come attivo",
+    "confirmDelete": "Eliminare l'obiettivo «{{name}}»? L'operazione è irreversibile.",
+    "domain": {
+      "strength": "Forza",
+      "endurance": "Resistenza",
+      "calisthenics": "Calistenica"
+    },
+    "metric": {
+      "weight_kg": "Peso (kg)",
+      "reps": "Ripetizioni",
+      "time_sec": "Tempo (sec)"
+    }
   },
   "timer": {
     "title": "Timer",

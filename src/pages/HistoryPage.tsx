@@ -1,320 +1,344 @@
 // src/pages/HistoryPage.tsx
 import { useMemo, useState } from "react";
 import {
+  Badge,
   Card,
-  CardSection,
-  Text,
-  SegmentedControl,
   Group,
-  useMantineTheme,
-  useMantineColorScheme,
+  SegmentedControl,
+  Stack,
+  Text,
   Title,
+  useMantineTheme,
+  useComputedColorScheme,
 } from "@mantine/core";
+import { useTranslation } from "react-i18next";
+import type { PlanState, HistoryPoint } from "../types";
 import {
-  ResponsiveContainer,
-  LineChart,
+  Area,
+  AreaChart,
+  CartesianGrid,
   Line,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ReferenceDot,
+  Legend,
   Brush,
 } from "recharts";
-import type { PlanState } from "../types";
-import { t } from "i18next";
-import { Trans, useTranslation } from "react-i18next";
 
-// ---------- тип точки ----------
-type DP = {
-  name: string; // "#5"
-  volume: number; // объём за сессию
-  rpe: number; // RPE
-  date: Date; // дата сессии
-  _x: number; // числовая ось для LTTB
-};
+type Filter = "all" | "goals" | "general";
+type Range = "30d" | "90d" | "6m" | "all";
 
-// ---------- LTTB downsampling ----------
-function lttb(points: DP[], threshold: number): DP[] {
-  if (threshold >= points.length || threshold <= 0) return points;
-  const sampled: DP[] = [points[0]];
-  const bucketSize = (points.length - 2) / (threshold - 2);
-  let a = 0;
+interface DP {
+  label: string;
+  volume: number;
+  rpe?: number | null;
+  _x: number;
+  goalName?: string;
+}
 
-  for (let i = 0; i < threshold - 2; i++) {
-    const start = Math.floor((i + 1) * bucketSize) + 1;
-    const end = Math.floor((i + 2) * bucketSize) + 1;
-    const bucket = points.slice(start, end);
+const DAY = 86400000;
 
-    const nextStart = Math.floor((i + 2) * bucketSize) + 1;
-    const nextEnd = Math.floor((i + 3) * bucketSize) + 1;
-    const nextBucket = points.slice(nextStart, nextEnd);
+function toDateSafe(iso: string | Date | undefined): Date {
+  if (!iso) return new Date(0);
+  if (iso instanceof Date) return iso;
+  const d = new Date(iso);
+  return isNaN(+d) ? new Date(0) : d;
+}
 
-    const avgX =
-      nextBucket.reduce((s, p) => s + (p?._x ?? 0), 0) /
-      (nextBucket.length || 1);
-    const avgY =
-      nextBucket.reduce((s, p) => s + (p?.volume ?? 0), 0) /
-      (nextBucket.length || 1);
-
-    let maxArea = -1;
-    let maxPoint: DP = bucket[0] ?? points[start] ?? points[a];
-    let maxIdx = start;
-
-    for (let j = 0; j < bucket.length; j++) {
-      const p = bucket[j];
-      const ax = points[a]._x;
-      const ay = points[a].volume;
-      const area =
-        Math.abs((ax - avgX) * (p.volume - ay) - (ax - p._x) * (avgY - ay)) *
-        0.5;
-      if (area > maxArea) {
-        maxArea = area;
-        maxPoint = p;
-        maxIdx = start + j;
-      }
-    }
-    sampled.push(maxPoint);
-    a = maxIdx;
+function fmtDateShort(d: Date) {
+  try {
+    return d.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return d.toISOString().slice(0, 10);
   }
-
-  sampled.push(points[points.length - 1]);
-  return sampled;
 }
 
-// ---------- скользящая средняя ----------
-function movingAvg(arr: number[], k: number): number[] {
-  return arr.map((_, i) => {
-    const slice = arr.slice(Math.max(0, i - (k - 1)), i + 1);
-    const s = slice.reduce((a, b) => a + b, 0);
-    return Math.round(s / slice.length);
-  });
-}
-
-// ---------- компонент ----------
 export default function HistoryPage({ state }: { state: PlanState }) {
-  const theme = useMantineTheme();
-  const { colorScheme } = useMantineColorScheme();
-  const [range, setRange] = useState<"30" | "90" | "180" | "365" | "all">("90");
   const { t } = useTranslation();
+  const theme = useMantineTheme();
+  const colorScheme = useComputedColorScheme("light", {
+    getInitialValueInEffect: true,
+  });
 
-  // исходные данные
-  const dataFull: DP[] = useMemo(() => {
-    const base = (state.history ?? []).map((h) => ({
-      name: `#${h.sessionNumber}`,
-      volume: h.volume,
-      rpe: h.rpe,
-      date: new Date(h.date),
-    }));
-    return base.map((d, idx) => ({ ...d, _x: +d.date || idx }));
-  }, [state.history]);
+  const colVol = theme.colors.indigo[5];
+  const colRpe = theme.colors.orange[6];
 
-  // диапазон
-  const dataRanged: DP[] = useMemo(() => {
-    if (range === "all") return dataFull;
-    const days = parseInt(range, 10);
-    const cutoff = Date.now() - days * 24 * 3600 * 1000;
-    return dataFull.filter((d) => +d.date >= cutoff);
-  }, [dataFull, range]);
+  // фильтры
+  const [filter, setFilter] = useState<Filter>("all");
+  const [range, setRange] = useState<Range>("30d");
 
-  // downsampling
-  const data: DP[] = useMemo(() => {
-    const MAX_POINTS = 240;
-    return dataRanged.length > MAX_POINTS
-      ? lttb(dataRanged, MAX_POINTS)
-      : dataRanged;
-  }, [dataRanged]);
+  // акцентные стили для переключателей (без проблемных data-checked)
+  const accentedSegProps = {
+    color: theme.primaryColor,
+    radius: "md" as const,
+    styles: {
+      root: { background: "transparent" },
+      indicator: { boxShadow: "none" },
+      label: { fontWeight: 700 },
+    },
+  };
 
-  if (data.length === 0) {
-    return (
-      <>
-        <Title order={2} mb="sm">
-          {t("history.title")}
-        </Title>
-        <Card withBorder shadow="sm" radius="md" p="md">
-          <Text c="dimmed">{t("history.noData")}</Text>
-        </Card>
-      </>
+  // дата "с" для выбранного диапазона
+  const dateFrom = useMemo<Date | null>(() => {
+    const now = Date.now();
+    switch (range) {
+      case "30d":
+        return new Date(now - 30 * DAY);
+      case "90d":
+        return new Date(now - 90 * DAY);
+      case "6m": {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 6);
+        return d;
+      }
+      default:
+        return null; // all
+    }
+  }, [range]);
+
+  // 1) фильтр по типу сессий
+  const base = useMemo<HistoryPoint[]>(() => {
+    const src = state.history ?? [];
+    return src.filter((h) => {
+      if (filter === "goals") return !!h.goalId;
+      if (filter === "general") return !h.goalId;
+      return true;
+    });
+  }, [state.history, filter]);
+
+  // 2) фильтр по периоду
+  const ranged = useMemo<HistoryPoint[]>(() => {
+    if (!dateFrom) return base;
+    return base.filter((h) => toDateSafe(h.date) >= dateFrom);
+  }, [base, dateFrom]);
+
+  // 3) данные для графика
+  const dataFull = useMemo<DP[]>(() => {
+    const sorted = [...ranged].sort(
+      (a, b) => +toDateSafe(a.date) - +toDateSafe(b.date)
     );
-  }
+    return sorted.map((h, idx) => {
+      const d = toDateSafe(h.date);
+      const vol = Number((h as any).volume ?? 0);
+      const rpeVal = (h as any).rpe ?? null;
+      return {
+        label: `#${h.sessionNumber} • ${fmtDateShort(d)}`,
+        volume: isFinite(vol) ? vol : 0,
+        rpe: typeof rpeVal === "number" ? rpeVal : null,
+        _x: +d || idx,
+        goalName: h.goalName,
+      };
+    });
+  }, [ranged]);
 
-  // сглаживание и PR
-  const vols = data.map((d) => d.volume);
-  const maWindow = data.length < 40 ? 3 : data.length < 120 ? 5 : 9;
-  const ma = movingAvg(vols, maWindow);
-  let max = 0;
-  const maxSoFar = vols.map((v) => (max = Math.max(max, v)));
-
-  // палитра под тему
-  const axisColor =
-    colorScheme === "dark" ? theme.colors.gray[5] : theme.colors.gray[6];
-  const gridColor =
-    colorScheme === "dark" ? theme.colors.gray[4] : theme.colors.gray[3];
-  const maColor =
-    colorScheme === "dark" ? theme.colors.gray[4] : theme.colors.gray[6];
-  const prColor = theme.colors.green[6];
-  // яркая сплошная — зависит от темы
-
-  const accentShades = theme.colors[theme.primaryColor];
-  const volumeStroke =
-    colorScheme === "dark" ? accentShades[4] : accentShades[6];
-  const activeDotFill =
-    colorScheme === "dark" ? accentShades[3] : accentShades[7];
-
-  // Brush под тему
-  const brushStroke =
-    colorScheme === "dark" ? theme.colors.gray[4] : theme.colors.gray[7];
-  const brushTraveller =
-    colorScheme === "dark" ? theme.colors.gray[3] : theme.colors.gray[6];
-  const brushFill =
-    colorScheme === "dark" ? theme.colors.dark[6] : theme.colors.gray[0];
+  // 4) статистика по текущему срезу
+  const stats = useMemo(() => {
+    let totalVol = 0,
+      rpeSum = 0,
+      rpeCnt = 0;
+    ranged.forEach((h) => {
+      totalVol += Number((h as any).volume ?? 0);
+      if (typeof (h as any).rpe === "number") {
+        rpeSum += Number((h as any).rpe);
+        rpeCnt++;
+      }
+    });
+    return {
+      count: ranged.length,
+      volume: totalVol,
+      rpeAvg: rpeCnt ? Math.round((rpeSum / rpeCnt) * 10) / 10 : null,
+    };
+  }, [ranged]);
 
   return (
-    <>
-      <Title order={2} mb="sm">
-        {t("history.title")}
-      </Title>
-      <Card withBorder shadow="sm" radius="md" p="md">
-        <Group justify="space-between" mb="xs">
-          <Text fw={700}>{t("history.progress")}</Text>
+    <Stack>
+      <Group justify="space-between" align="center">
+        <Title order={2}>
+          {t("history.title", { defaultValue: "История" })}
+        </Title>
+
+        <Group gap="sm" wrap="wrap">
           <SegmentedControl
-            size="xs"
+            {...accentedSegProps}
             value={range}
-            onChange={(v) => setRange(v as any)}
+            onChange={(v) => setRange(v as Range)}
             data={[
-              { label: t("history.range.30d"), value: "30" },
-              { label: t("history.range.90d"), value: "90" },
-              { label: t("history.range.6m"), value: "180" },
-              { label: t("history.range.12m"), value: "365" },
-              { label: t("history.range.all"), value: "all" },
+              {
+                label: t("history.range.30d", { defaultValue: "30д" }),
+                value: "30d",
+              },
+              {
+                label: t("history.range.90d", { defaultValue: "90д" }),
+                value: "90d",
+              },
+              {
+                label: t("history.range.6m", { defaultValue: "6м" }),
+                value: "6m",
+              },
+              {
+                label: t("history.range.all", { defaultValue: "Все" }),
+                value: "all",
+              },
+            ]}
+          />
+
+          <SegmentedControl
+            {...accentedSegProps}
+            value={filter}
+            onChange={(v) => setFilter(v as Filter)}
+            data={[
+              {
+                label: t("history.filter.all", { defaultValue: "Все" }),
+                value: "all",
+              },
+              {
+                label: t("history.filter.goals", { defaultValue: "Целевые" }),
+                value: "goals",
+              },
+              {
+                label: t("history.filter.general", { defaultValue: "Обычные" }),
+                value: "general",
+              },
             ]}
           />
         </Group>
+      </Group>
 
-        <div style={{ width: "100%", height: 300 }}>
+      <Group gap="lg">
+        <Text size="sm" c="dimmed">
+          {t("history.filter." + filter, { defaultValue: filter })}
+        </Text>
+        <Text size="sm" c="dimmed">
+          {t("common.sessions", { defaultValue: "Sessions" })}: {stats.count}
+        </Text>
+        <Text size="sm" c="dimmed">
+          {t("common.volume", { defaultValue: "Volume" })}: {stats.volume}
+        </Text>
+        <Text size="sm" c="dimmed">
+          {t("common.rpeAvg", { defaultValue: "Avg RPE" })}:{" "}
+          {stats.rpeAvg ?? "—"}
+        </Text>
+      </Group>
+
+      <Card withBorder radius="lg" p="lg">
+        <div style={{ width: "100%", height: 340 }}>
           <ResponsiveContainer>
-            <LineChart
-              data={data}
-              margin={{ top: 8, right: 16, left: 4, bottom: 0 }}
+            <AreaChart
+              data={dataFull}
+              margin={{ top: 8, right: 12, left: 8, bottom: 32 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-              {/* из-за бага типов Recharts добавляем ...({} as any) */}
-              <XAxis
-                dataKey="name"
-                tickMargin={6}
-                stroke={axisColor}
-                tick={{ fill: axisColor, fontSize: 12 }}
-                {...({} as any)}
-              />
+              <defs>
+                <linearGradient id="volFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={colVol} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={colVol} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid strokeDasharray="4 4" />
+              <XAxis dataKey="label" hide />
               <YAxis
-                width={42}
-                domain={["dataMin - 5", "dataMax + 10"]}
-                stroke={axisColor}
-                tick={{ fill: axisColor, fontSize: 12 }}
+                yAxisId="left"
+                stroke={colVol}
+                domain={[0, (max: number) => Math.ceil(max * 1.15)]}
               />
+              <YAxis yAxisId="right" stroke={colRpe} orientation="right" />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                wrapperStyle={{ paddingBottom: 8 }}
+              />
+
               <Tooltip
-                cursor={{ stroke: gridColor, strokeDasharray: "3 3" }}
-                wrapperStyle={{ backdropFilter: "blur(2px)" }}
-                formatter={(val: any, key: string) =>
-                  key === "volume"
-                    ? [`${val}`, t("history.volume")]
-                    : [`${val}`, "RPE"]
-                }
-                labelFormatter={(_label, payload) => {
-                  const p = Array.isArray(payload)
-                    ? (payload[0]?.payload as DP | undefined)
-                    : undefined;
-                  const d =
-                    p?.date instanceof Date
-                      ? p.date
-                      : p
-                      ? new Date((p as any).date ?? p)
-                      : null;
-                  return d ? d.toLocaleString() : String(_label);
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const p: any = payload[0].payload;
+                  return (
+                    <Card withBorder radius="md" p="sm">
+                      <Stack gap={2}>
+                        <Text fw={600}>{label}</Text>
+                        <Group gap={8}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: 10,
+                              height: 10,
+                              borderRadius: 999,
+                              background: colVol,
+                            }}
+                          />
+                          <Text size="sm">Volume: {p.volume}</Text>
+                        </Group>
+                        {typeof p.rpe === "number" && (
+                          <Group gap={8}>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: 10,
+                                height: 10,
+                                borderRadius: 999,
+                                background: colRpe,
+                              }}
+                            />
+                            <Text size="sm">RPE: {p.rpe}</Text>
+                          </Group>
+                        )}
+                        {p.goalName && (
+                          <Badge variant="light" mt={4}>
+                            {t("history.badge.goal", {
+                              defaultValue: "Цель: {{name}}",
+                              name: p.goalName,
+                            })}
+                          </Badge>
+                        )}
+                      </Stack>
+                    </Card>
+                  );
                 }}
               />
 
-              {/* сплошная — объём (яркая) + активная точка под акцент */}
-              <Line
+              <Area
+                name="Volume"
+                yAxisId="left"
                 type="monotone"
                 dataKey="volume"
-                stroke={volumeStroke}
-                strokeWidth={2.5}
-                dot={false}
-                activeDot={{ r: 5, fill: activeDotFill, stroke: "transparent" }}
+                stroke={colVol}
+                strokeOpacity={0.9}
+                fill="url(#volFill)"
+                activeDot={false}
+                isAnimationActive={false}
               />
-
-              {/* пунктир — MA (приглушённый) */}
               <Line
+                name="RPE"
+                yAxisId="right"
                 type="monotone"
-                data={data.map((d, i) => ({ ...d, ma: ma[i] }))}
-                dataKey="ma"
-                stroke={maColor}
-                strokeDasharray="5 5"
-                strokeWidth={2}
+                dataKey="rpe"
+                stroke={colRpe}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
                 dot={false}
+                isAnimationActive={false}
               />
 
-              {/* PR точки — зелёные */}
-              {data.map((d, i) =>
-                d.volume === maxSoFar[i] ? (
-                  <ReferenceDot
-                    key={`${d.name}-${i}`}
-                    x={d.name}
-                    y={d.volume}
-                    r={4}
-                    fill={prColor}
-                    stroke={prColor}
-                  />
-                ) : null
+              {range === "all" && dataFull.length > 30 && (
+                <Brush
+                  dataKey="label"
+                  height={24}
+                  travellerWidth={10}
+                  stroke={colVol}
+                  fill="transparent"
+                  startIndex={Math.max(0, dataFull.length - 30)}
+                  tickFormatter={(l) => String(l).split("•")[0]}
+                />
               )}
-
-              {/* скроллер под тему */}
-              <Brush
-                dataKey="name"
-                height={16}
-                travellerWidth={8}
-                stroke={brushStroke}
-                traveller
-                travellerStroke={brushTraveller as any}
-                fill={brushFill}
-                {...({} as any)}
-              />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
-
-        {/* красивая инструкция */}
-        <CardSection
-          withBorder
-          inheritPadding
-          py="xs"
-          mt="md"
-          style={{
-            backgroundColor:
-              colorScheme === "dark"
-                ? theme.colors.dark[7]
-                : theme.colors.gray[0],
-            borderRadius: theme.radius.md,
-          }}
-        >
-          <Group align="flex-start" gap="sm" wrap="nowrap">
-            <Text size="sm" c="dimmed">
-              <Trans
-                i18nKey="history.howToRead"
-                values={{ maWindow }}
-                components={{
-                  b: <b />,
-                  br: <br />,
-                  solid: <span style={{ color: volumeStroke }} />,
-                  dashed: <span style={{ color: maColor }} />,
-                  pr: <span style={{ color: prColor }} />,
-                }}
-              />
-            </Text>
-          </Group>
-        </CardSection>
       </Card>
-    </>
+    </Stack>
   );
 }

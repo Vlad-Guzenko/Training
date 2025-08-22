@@ -1,5 +1,13 @@
 export type Env = "outdoor" | "home" | "gym";
-export type Muscle = "legs" | "chest" | "back" | "shoulders" | "biceps" | "triceps" | "core" | "full";
+export type Muscle =
+  | "legs"
+  | "chest"
+  | "back"
+  | "shoulders"
+  | "biceps"
+  | "triceps"
+  | "core"
+  | "full";
 
 export interface Exercise {
   id: string;
@@ -15,6 +23,8 @@ export interface HistoryPoint {
   date: string;
   volume: number;
   rpe: number;
+  goalId?: string;
+  goalName?: string;
 }
 
 export interface PlanState {
@@ -28,4 +38,6 @@ export interface PlanState {
   restSeconds: number;
   restLeft: number;
   restRunning: boolean;
+  activeGoalId?: string;
+  activeGoalName?: string;
 }

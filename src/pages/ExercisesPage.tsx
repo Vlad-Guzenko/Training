@@ -28,7 +28,6 @@ import { auth } from "../lib/firebase";
 import { ActionIcon, Tooltip } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import { deleteCustomExercise } from "../lib/customExercises"; // есть в нашем API
-import { t } from "i18next";
 import { useTranslation } from "react-i18next";
 
 const ENV_OPTS: { value: Env; label: string }[] = [

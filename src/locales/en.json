@@ -31,7 +31,8 @@
     "newExercise": "New exercise",
     "planCopied": "Plan copied",
     "clipboardFallback": "Clipboard unavailable — downloaded .txt",
-    "addExerciseFrom": "Add exercises in the \"Exercises\" tab on the left."
+    "addExerciseFrom": "Add exercises in the \"Exercises\" tab on the left.",
+    "goalMode": "Goal mode: {{name}}"
   },
   "exercises": {
     "title": "Exercises",
@@ -135,10 +136,53 @@
       "12m": "12m",
       "all": "All"
     },
+    "filter": {
+      "all": "All",
+      "goals": "Goals",
+      "general": "General"
+    },
+    "badge": {
+      "goal": "Goal: {{name}}"
+    },
     "volume": "Volume",
     "progress": "Progress in volume",
     "noData": "No data yet. Complete at least one session and the chart will come to life.",
     "howToRead": "<b>How to read the chart:</b><br/><solid>Solid line</solid> — session volume.<br/><dashed>Dashed</dashed> — moving average (MA{{maWindow}}) to smooth the trend.<br/><pr>Green dots</pr> — personal records (PR) at the session time.<br/>Use the range above (30/90 days, 6/12 months or all). The bottom slider lets you scroll and zoom. Hover a point to see date, RPE and volume."
+  },
+  "goals": {
+    "title": "Goals",
+    "new": "New goal",
+    "defaultName": "My goal",
+    "name": "Name",
+    "domainLabel": "Domain",
+    "metricLabel": "Metric",
+    "target": "Target",
+    "weeks": "Weeks",
+    "weeksShort": "{{n}} weeks",
+    "freqPerWeek": "Sessions/week",
+    "intensity": "Intensity",
+    "intensityLevel": { "easy": "Easy", "base": "Base", "hard": "Hard" },
+    "eta": "ETA",
+    "etaLabel": "Estimated finish",
+    "etaUnknown": "unknown",
+    "suggest": "Suggest workout",
+    "preview": "Preview workout",
+    "suggestedFor": "Suggested for: {{name}}",
+    "addToPlan": "Add to plan",
+    "replacePlan": "Replace plan",
+    "active": "Active",
+    "makeActive": "Set as active",
+    "confirmDelete": "Delete goal “{{name}}”? This cannot be undone.",
+    "domain": {
+      "strength": "Strength",
+      "endurance": "Endurance",
+      "calisthenics": "Calisthenics"
+    },
+    "metric": {
+      "weight_kg": "Weight (kg)",
+      "reps": "Reps",
+      "time_sec": "Time (sec)"
+    }
   },
   "timer": {
     "title": "Timer",

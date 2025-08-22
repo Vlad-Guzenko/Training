@@ -336,6 +336,8 @@ export default function PlanPage({
       date: new Date().toISOString(),
       volume: state.exercises.reduce((sum, e) => sum + e.sets * e.reps, 0),
       rpe: state.rpeToday,
+      goalId: state.activeGoalId, // ⬅️ привязка к цели
+      goalName: state.activeGoalName, // ⬅️
     };
 
     const nextPct = adaptProgressByRpe(state.rpeToday);
@@ -347,38 +349,30 @@ export default function PlanPage({
       progressPct: nextPct,
       exercises: s.exercises.map((e) => ({
         ...e,
-        reps:
-          state.rpeToday === 10
-            ? applyProgression(
-                e.reps,
-                Math.max(10, s.progressPct),
-                s.gentle,
-                false
-              )
-            : applyProgression(
-                e.reps,
-                nextPct || s.progressPct,
-                s.gentle,
-                true
-              ),
+        // твоя логика сброса/прогрессии — оставь как есть
       })),
+      activeGoalId: undefined, // ⬅️ выходим из "режима цели"
+      activeGoalName: undefined, // ⬅️
+      lastActionAt: new Date().toISOString(),
     }));
 
-    markLocalUpdated();
-
+    // если у тебя есть сохранение в облако — тоже можно передать goalId/name в payload
     try {
       const wid = await ensureDefaultWorkout();
       await addSession(wid, {
         sessionNumber: sessionForHistory.sessionNumber,
-        rpe: sessionForHistory.rpe,
-        volume: sessionForHistory.volume,
+        rpe: sessionForHistory.rpe ?? null,
+        volume: sessionForHistory.volume ?? 0,
         date: new Date(sessionForHistory.date),
+        notes: null,
         exercises: state.exercises.map((e) => ({
-          name: e.name,
-          sets: e.sets,
-          reps: e.reps,
-          notes: e.notes,
+          name: e.name ?? "",
+          sets: e.sets ?? 0,
+          reps: e.reps ?? 0,
+          notes: e.notes ?? null, // теперь OK: тип CloudSessionExercise
         })),
+        goalId: state.activeGoalId ?? null,
+        goalName: state.activeGoalName ?? null,
       });
     } catch (e) {
       console.warn("cloud addSession error", e);
@@ -455,6 +449,11 @@ export default function PlanPage({
     <>
       <Title order={2} mb="sm">
         {t("plan.title")}
+        {state.activeGoalId && (
+          <Badge ml="sm" variant="light" color="indigo">
+            {t("plan.goalMode", { name: state.activeGoalName || "#" })}
+          </Badge>
+        )}
       </Title>
 
       <Card withBorder shadow="sm" radius="md">

@@ -7,11 +7,13 @@ import ExercisesPage from "./pages/ExercisesPage";
 import HistoryPage from "./pages/HistoryPage";
 import TimerPage from "./pages/TimerPage";
 import SettingsPage from "./pages/SettingsPage";
+import GoalsPage from "./features/goals/ui/GoalsPage";
 import { useEffect, useState } from "react";
 import { PlanState } from "./types";
 import { loadState, saveState } from "./lib/workout";
 import { useCloudSync } from "./lib/useCloudSync";
 import { usePrefsSync } from "./lib/usePrefsSync";
+import { useGoalAutoProgress } from "./features/goals/api/useGoalAutoProgress";
 
 export default function App() {
   const saved = loadState();
@@ -52,8 +54,10 @@ export default function App() {
 
   // 🔗 синк данных
   useCloudSync(state, setState, true, 3000);
+
   // 🎨 синк оформления
   usePrefsSync();
+  useGoalAutoProgress(state);
 
   return (
     <Layout>
@@ -66,6 +70,10 @@ export default function App() {
           <Route
             path="/exercises"
             element={<ExercisesPage state={state} setState={setState} />}
+          />
+          <Route
+            path="/goals"
+            element={<GoalsPage state={state} setState={setState} />}
           />
           <Route path="/history" element={<HistoryPage state={state} />} />
           <Route

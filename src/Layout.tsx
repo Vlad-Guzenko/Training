@@ -24,6 +24,7 @@ import {
   IconWeight,
   IconLanguage,
   IconCheck,
+  IconTarget,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { usePrefsSync } from "./lib/usePrefsSync";
@@ -177,6 +178,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             label={t("exercises.title")}
             active={isActive("/exercises")}
             leftSection={<IconWeight size={18} />}
+            onClick={() => setOpened(false)}
+          />
+          <NavLink
+            component={RouterLink}
+            to="/goals"
+            label={t("goals.title")}
+            active={isActive("/goals")}
+            leftSection={<IconTarget size={18} />}
             onClick={() => setOpened(false)}
           />
           <NavLink
