@@ -33,10 +33,12 @@ export default function App() {
       }
   );
 
+  // сохраняем локально любые изменения
   useEffect(() => {
     saveState(state);
   }, [state]);
 
+  // таймер отдыха
   useEffect(() => {
     if (!state.restRunning) return;
     const id = setInterval(
@@ -51,6 +53,7 @@ export default function App() {
     return () => clearInterval(id);
   }, [state.restRunning]);
 
+  // ГЛОБАЛЬНАЯ синхронизация (без коллбеков, идемпотентно)
   useCloudSync(state, setState, true, 3000);
 
   usePrefsSync();

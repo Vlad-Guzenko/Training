@@ -1,55 +1,54 @@
+// src/pages/SettingsPage.tsx
 import { useEffect, useRef, useState } from "react";
 import {
+  ActionIcon,
+  Avatar,
+  Badge,
   Button,
   Card,
-  Group,
-  Stack,
-  Title,
-  Text,
+  ColorSwatch,
   Divider,
-  ActionIcon,
-  Badge,
   FileInput,
-  Menu,
+  Group,
   Modal,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
   useMantineColorScheme,
   useMantineTheme,
-  Avatar,
-  ColorSwatch,
-  SimpleGrid,
 } from "@mantine/core";
 import {
-  IconSun,
-  IconMoonStars,
-  IconDownload,
-  IconUpload,
-  IconTrash,
   IconBell,
-  IconClipboard,
   IconBrandGoogle,
-  IconLogout,
-  IconCloudUp,
+  IconClipboard,
   IconCloudDown,
+  IconCloudUp,
+  IconDownload,
+  IconLogout,
+  IconMoonStars,
+  IconSun,
+  IconTrash,
+  IconUpload,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
+import { useTranslation } from "react-i18next";
+
 import { LS_KEY } from "../lib/workout";
 import { usePrimaryColor } from "../lib/usePrimaryColor";
-
 import { cloudLoad, cloudSave } from "../lib/cloud";
 import type { PlanState } from "../types";
 import { db, onAuth, signInWithGoogle, signOutGoogle } from "../lib/firebase";
 import { useCloudSync } from "../lib/useCloudSync";
 import { SyncBadge } from "../components/SyncBadge";
-import { useTranslation } from "react-i18next";
 import {
   clearIndexedDbPersistence,
-  terminate,
   deleteDoc,
   doc,
+  terminate,
 } from "firebase/firestore";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { modalSafeProps } from "../lib/modalSafe";
-import { modals } from "@mantine/modals";
 
 export default function SettingsPage({
   state,
@@ -60,21 +59,32 @@ export default function SettingsPage({
 }) {
   const theme = useMantineTheme();
   const [primary, setPrimary] = usePrimaryColor();
-
-  const SKIP_IMPORT_FLAG = "__wf_skip_local_import_once";
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const fileRef = useRef<File | null>(null);
   const [size, setSize] = useState(() => roughStorageSize());
-  const [askOpen, { open: openAsk, close: closeAsk }] = useDisclosure(false);
-
+  const [signoutOpen, signout] = useDisclosure(false);
   const [user, setUser] = useState<import("firebase/auth").User | null>(null);
-  useEffect(() => onAuth(setUser), []);
-  const status = useCloudSync(state, setState);
   const isPhone = useMediaQuery("(max-width: 480px)");
+  const { t } = useTranslation();
+
+  // подгружаем фото после логина (у Google иногда появится на второй тик)
+  useEffect(() => {
+    const unsub = onAuth(async (u) => {
+      if (u && (!u.photoURL || !u.providerData?.[0]?.photoURL)) {
+        try {
+          await u.reload();
+        } catch {}
+      }
+      setUser(u);
+    });
+    return unsub;
+  }, []);
+
+  // синк без лишних уведомлений
+  const status = useCloudSync(state, setState, true, 3000);
+
   const toggleScheme = () =>
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
-  const [signoutOpen, signout] = useDisclosure(false);
-  const { t } = useTranslation();
 
   const saveCloud = async () => {
     try {
@@ -258,125 +268,21 @@ export default function SettingsPage({
       try {
         localStorage.clear();
       } catch {}
-
       try {
         await terminate(db as any).catch(() => {});
         await clearIndexedDbPersistence(db as any).catch(() => {});
       } catch {}
-
       try {
         if ("caches" in window) {
           const names = await caches.keys();
           await Promise.all(names.map((n) => caches.delete(n)));
         }
       } catch {}
-
       window.location.reload();
     }
   };
 
-  const hardSignOut = handleSignOut;
-
-  function openSignOutConfirm() {
-    modals.openConfirmModal({
-      centered: true,
-      title: t("settings.signOutConfirmTitle", {
-        defaultValue: "Выйти из аккаунта?",
-      }) as string,
-      children: (
-        <Text size="sm">
-          {t("settings.signOutConfirmText", {
-            defaultValue:
-              "Вы выйдете из аккаунта, а кэш и локальные данные на этом устройстве будут удалены.",
-          })}
-        </Text>
-      ),
-      labels: {
-        cancel: t("common.cancel") as string,
-        confirm: t("settings.signOut", { defaultValue: "Выйти" }) as string,
-      },
-      confirmProps: { color: "red" },
-      // чтобы фон перекрывал safe-areas в PWA
-      overlayProps: {
-        opacity: 0.55,
-        style: {
-          position: "fixed",
-          inset: 0,
-          height: "100dvh",
-          backdropFilter: "blur(2px)",
-        },
-      },
-      onConfirm: hardSignOut,
-    });
-  }
-
-  function isMeaningfulPlan(obj: any): boolean {
-    if (!obj || typeof obj !== "object") return false;
-
-    const candidates = [
-      obj?.history,
-      obj?.sessions,
-      obj?.exercises,
-      obj?.customExercises,
-      obj?.workouts,
-      obj?.plan?.exercises,
-      obj?.plan?.days,
-      obj?.weeks,
-    ].filter(Array.isArray) as any[];
-
-    if (candidates.some((a) => a.length > 0)) return true;
-
-    const stack: any[] = [obj];
-    const seen = new Set<any>();
-    while (stack.length) {
-      const cur = stack.pop();
-      if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
-      seen.add(cur);
-      for (const k in cur) {
-        const v = cur[k];
-        if (Array.isArray(v)) {
-          if (v.length > 0) return true;
-        } else if (v && typeof v === "object") {
-          stack.push(v);
-        }
-      }
-    }
-
-    return false;
-  }
-
-  function hasLocalProgress(): boolean {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return false;
-      const t = raw.trim();
-      if (!t || t === "{}" || t === "null" || t === "undefined") return false;
-      const obj = JSON.parse(t);
-      return isMeaningfulPlan(obj);
-    } catch {
-      return false;
-    }
-  }
-
-  const proceedImport = async () => {
-    closeAsk();
-    await signInWithGoogle();
-  };
-
-  const proceedFresh = async () => {
-    try {
-      localStorage.setItem(SKIP_IMPORT_FLAG, "1");
-      localStorage.removeItem(LS_KEY);
-    } catch {}
-    closeAsk();
-    await signInWithGoogle();
-  };
-
   const handleSignIn = async () => {
-    if (hasLocalProgress()) {
-      openAsk();
-      return;
-    }
     await signInWithGoogle();
   };
 
@@ -390,7 +296,26 @@ export default function SettingsPage({
         <Card withBorder shadow="sm" radius="md">
           <Group justify="space-between" align="center">
             <Group>
-              <Avatar src={user?.photoURL ?? undefined} radius="xl" />
+              <Avatar
+                key={
+                  user?.photoURL || user?.providerData?.[0]?.photoURL || "anon"
+                }
+                src={(() => {
+                  const raw =
+                    user?.photoURL || user?.providerData?.[0]?.photoURL || "";
+                  if (!raw) return undefined;
+                  try {
+                    const u = new URL(raw);
+                    if (!u.searchParams.has("sz"))
+                      u.searchParams.set("sz", "128");
+                    return u.toString();
+                  } catch {
+                    return raw.includes("?") ? raw : `${raw}?sz=128`;
+                  }
+                })()}
+                radius="xl"
+                imageProps={{ referrerPolicy: "no-referrer" }}
+              />
               <div>
                 <Text fw={600}>{t("settings.account")}</Text>
                 <Text size="sm" c="dimmed">
@@ -470,6 +395,7 @@ export default function SettingsPage({
             ))}
           </SimpleGrid>
         </Card>
+
         <Card withBorder shadow="sm" radius="md">
           <Group justify="space-between" align="center">
             <div>
@@ -483,7 +409,7 @@ export default function SettingsPage({
               size="lg"
               radius="xl"
               onClick={toggleScheme}
-              title="Сменить тему"
+              title="Switch theme"
             >
               {colorScheme === "dark" ? (
                 <IconSun size={18} />
@@ -531,25 +457,22 @@ export default function SettingsPage({
               value={fileRef.current ? (fileRef.current as any) : null}
               clearable
             />
-            <Menu withinPortal position="bottom-start">
-              <Menu.Target>
-                <Button
-                  color="red"
-                  variant="light"
-                  leftSection={<IconTrash size={16} />}
-                >
-                  {t("settings.clear")}
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item onClick={handleClearLocalPlan}>
-                  {t("settings.resetPlanLocal")}
-                </Menu.Item>
-                <Menu.Item color="red" onClick={handleClearPlanEverywhere}>
-                  {t("settings.resetPlanEverywhere")}
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+            <Button
+              color="red"
+              variant="light"
+              leftSection={<IconTrash size={16} />}
+              onClick={handleClearLocalPlan}
+            >
+              {t("settings.resetPlanLocal")}
+            </Button>
+            <Button
+              color="red"
+              variant="subtle"
+              leftSection={<IconTrash size={16} />}
+              onClick={handleClearPlanEverywhere}
+            >
+              {t("settings.resetPlanEverywhere")}
+            </Button>
             <Button
               variant="default"
               leftSection={<IconClipboard size={16} />}
@@ -568,76 +491,24 @@ export default function SettingsPage({
           </Group>
         </Card>
       </Stack>
-      <Modal
-        {...modalSafeProps}
-        opened={askOpen}
-        onClose={closeAsk}
-        centered
-        withinPortal
-        size={isPhone ? "sm" : "lg"}
-        radius="md"
-        zIndex={20000}
-        title={t("settings.signInChoiceTitle")}
-        overlayProps={{
-          ...modalSafeProps.overlayProps,
-          opacity: 0.45,
-          zIndex: 19999,
-        }}
-        styles={{
-          ...modalSafeProps.styles,
-          body: { paddingTop: 8, paddingBottom: 8 },
-        }}
-      >
-        <Stack gap="md" style={{ paddingBottom: 0, marginBottom: 0 }}>
-          <Text size="sm" c="dimmed">
-            {t("settings.signInChoiceDesc")}
-          </Text>
 
-          <Group visibleFrom="sm" justify="space-between" wrap="nowrap">
-            <Button variant="default" onClick={closeAsk}>
-              {t("settings.signInChoiceCancel")}
-            </Button>
-            <Group gap="xs" wrap="nowrap">
-              <Button variant="outline" onClick={proceedFresh}>
-                {t("settings.signInChoiceFresh")}
-              </Button>
-              <Button onClick={proceedImport} autoFocus>
-                {t("settings.signInChoiceImport")}
-              </Button>
-            </Group>
-          </Group>
-
-          <Stack gap="xs" hiddenFrom="sm" style={{ marginBottom: 0 }}>
-            <Button fullWidth onClick={proceedImport}>
-              {t("settings.signInChoiceImport")}
-            </Button>
-            <Button variant="outline" fullWidth onClick={proceedFresh}>
-              {t("settings.signInChoiceFresh")}
-            </Button>
-            <Button variant="default" fullWidth onClick={closeAsk}>
-              {t("settings.signInChoiceCancel")}
-            </Button>
-          </Stack>
-        </Stack>
-      </Modal>
-      {/*Sign out modal*/}
+      {/* Подтверждение выхода */}
       <Modal
         {...modalSafeProps}
         opened={signoutOpen}
         onClose={signout.close}
-        title={t("settings.signOutConfirmTitle")}
+        title={t("settings.signOutConfirmTitle", { defaultValue: "Sign out?" })}
         centered
-        overlayProps={{
-          ...modalSafeProps.overlayProps,
-          opacity: 0.55,
-        }}
-        styles={{
-          ...modalSafeProps.styles,
-          content: { padding: "var(--mantine-spacing-sm)" },
-        }}
+        size={isPhone ? "sm" : "md"}
+        overlayProps={{ ...modalSafeProps.overlayProps, opacity: 0.55 }}
       >
         <Stack gap="sm">
-          <Text size="sm">{t("settings.signOutConfirmText")}</Text>
+          <Text size="sm">
+            {t("settings.signOutConfirmText", {
+              defaultValue:
+                "You will be signed out, and cache/local data on this device will be cleared.",
+            })}
+          </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={signout.close}>
               {t("common.cancel")}
