@@ -1,13 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Button,
-  Card,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +16,15 @@ import type { PlanState, Exercise } from "../../../types";
 import { auth } from "../../../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import GoalCard from "./GoalCard";
+import {
+  Button,
+  Card,
+  Group,
+  SimpleGrid,
+  Stack,
+  Title,
+  Text,
+} from "@mantine/core";
 
 export default function GoalsPage({
   state,
@@ -137,7 +137,7 @@ export default function GoalsPage({
   };
 
   return (
-    <Stack>
+    <Stack className="goals-page">
       <Group justify="space-between" wrap="nowrap">
         <Title order={2}>{t("goals.title")}</Title>
         {authed && (
@@ -150,18 +150,17 @@ export default function GoalsPage({
           </Button>
         )}
       </Group>
-      {authed && (
+      {!authed && (
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={openNew}
           fullWidth
-          hiddenFrom="sm"
         >
           {t("goals.new")}
         </Button>
       )}
 
-      {!authed ? (
+      {authed ? (
         <Card withBorder radius="lg" p="lg">
           <Text c="dimmed" size="sm">
             {t("auth.pleaseSignIn")}

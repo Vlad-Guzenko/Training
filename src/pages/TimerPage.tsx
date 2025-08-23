@@ -22,7 +22,7 @@ export default function TimerPage({
       <Title order={2} mb="sm">
         {t("timer.title")}
       </Title>
-      <Card withBorder shadow="sm" radius="md">
+      <Card withBorder radius="md">
         <Group justify="space-between" align="center" wrap="wrap">
           <Text fw={600}>{t("timer.restTimer")}</Text>
           <Group>

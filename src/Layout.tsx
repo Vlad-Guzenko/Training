@@ -227,7 +227,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             leftSection={<IconWeight size={18} />}
             onClick={() => setOpened(false)}
           />
-
           <NavLink
             component={RouterLink}
             to="/history"
