@@ -276,3 +276,55 @@ body {
   pointer-events: none;
   z-index: 29998; /* ниже модалки */
 }
+
+/* Отступ под шапку + safe-top */
+.mantine-Notifications-root {
+  top: calc(env(safe-area-inset-top, 0px) + 56px + 8px) !important;
+  z-index: 4000 !important;
+}
+
+/* Десктопная ширина и тень */
+@media (min-width: 481px) {
+  .mantine-Notifications-root {
+    right: 12px !important;
+    left: auto !important;
+    width: 420px !important;
+  }
+}
+
+/* Мобилка: почти на всю ширину */
+@media (max-width: 480px) {
+  .mantine-Notifications-root {
+    right: 8px !important;
+    left: 8px !important;
+    width: calc(100vw - 16px) !important;
+  }
+}
+
+/* Не выезжать за край в мобильном браузере и PWA */
+.mantine-Notifications-root {
+  box-sizing: border-box;
+}
+
+/* Узкие экраны: растянуть между левым/правым краем с учётом вырезов */
+@media (max-width: 600px) {
+  .mantine-Notifications-root {
+    left: calc(env(safe-area-inset-left, 0px) + 8px) !important;
+    right: calc(env(safe-area-inset-right, 0px) + 8px) !important;
+    width: auto !important;
+    max-width: calc(
+      100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) -
+        16px
+    ) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    /* ширина тоста = вся видимая ширина минус safe-areas и по 8px отступа */
+    --mantine-notification-width: calc(
+      100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) -
+        16px
+    ) !important;
+  }
+}

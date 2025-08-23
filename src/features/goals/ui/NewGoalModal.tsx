@@ -11,6 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type { Goal, GoalDomain, GoalMetric } from "../domain/types";
 import { createGoal } from "../api/repo";
+import { modalSafeProps } from "../../../lib/modalSafe";
 
 export default function NewGoalModal({
   opened,
@@ -58,7 +59,12 @@ export default function NewGoalModal({
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title={t("goals.new")}>
+    <Modal
+      {...modalSafeProps}
+      opened={opened}
+      onClose={onClose}
+      title={t("goals.new")}
+    >
       <Stack>
         <TextInput
           label={t("goals.name")}

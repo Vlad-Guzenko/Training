@@ -9,7 +9,6 @@ import {
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { modals } from "@mantine/modals";
 import { IconPlus } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -90,7 +89,7 @@ export default function GoalsPage({
     if (typeof v === "number") return v;
     if (typeof v === "string") return Date.parse(v) || 0;
     if (v instanceof Date) return v.getTime();
-    if (typeof v?.toMillis === "function") return v.toMillis(); // Firestore Timestamp
+    if (typeof v?.toMillis === "function") return v.toMillis();
     return 0;
   };
 
@@ -165,9 +164,7 @@ export default function GoalsPage({
       {!authed ? (
         <Card withBorder radius="lg" p="lg">
           <Text c="dimmed" size="sm">
-            {t("auth.pleaseSignIn", {
-              defaultValue: "Please sign in to manage goals.",
-            })}
+            {t("auth.pleaseSignIn")}
           </Text>
         </Card>
       ) : (

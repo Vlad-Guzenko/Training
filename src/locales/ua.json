@@ -84,7 +84,7 @@
     "import": "Імпорт JSON",
     "clear": "Очистити дані",
     "copyClipboard": "Копіювати в буфер",
-    "storageSize": "Обсяг сховища:",
+    "storageUsed": "Використано сховища:",
     "saved": "Збережено",
     "updatedCloud": "Дані оновлені в хмарі",
     "error": "Помилка",
@@ -126,7 +126,9 @@
     "signInChoiceImport": "Імпортувати локальні дані в хмару",
     "signInChoiceFresh": "Почати з нуля",
     "signInChoiceCancel": "Скасувати",
-    "signInImportConfirm": "Імпортувати поточні локальні дані в хмару під час входу?"
+    "signInImportConfirm": "Імпортувати поточні локальні дані в хмару під час входу?",
+    "signOutConfirmTitle": "Вийти з облікового запису?",
+    "signOutConfirmText": "Ви вийдете з облікового запису, а кеш і локальні дані на цьому пристрої буде видалено."
   },
   "history": {
     "title": "Історія",
@@ -146,6 +148,9 @@
     },
     "badge": {
       "goal": "Ціль: {{name}}"
+    },
+    "tooltip": {
+      "volume": "Обсяг: {{value}}"
     },
     "progress": "Прогрес за обсягом",
     "volume": "Обсяг",
@@ -175,6 +180,7 @@
     "replacePlan": "Замінити план",
     "active": "Активна",
     "makeActive": "Зробити активною",
+    "deleteTitle": "Видалити ціль?",
     "confirmDelete": "Видалити ціль «{{name}}»? Дію неможливо скасувати.",
     "domain": {
       "strength": "Сила",
@@ -220,6 +226,9 @@
     "swReady": "✅ Додаток готовий до офлайн-роботи."
   },
   "auth": {
+    "signInRequired": "Потрібно ввійти",
+    "pleaseSignInToManage": "Увійдіть, щоб керувати цілями",
+    "signInToCreate": "Увійдіть, створювати вправи",
     "signInFailedTitle": "Вхід не вдався",
     "signInRedirectTryTitle": "Пробую альтернативний вхід",
     "signInRedirectTryMsg": "Перенаправлення через Google…",

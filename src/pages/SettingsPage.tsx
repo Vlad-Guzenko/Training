@@ -12,8 +12,12 @@ import {
   FileInput,
   Menu,
   Modal,
+  useMantineColorScheme,
+  useMantineTheme,
+  Avatar,
+  ColorSwatch,
+  SimpleGrid,
 } from "@mantine/core";
-import { useMantineColorScheme } from "@mantine/core";
 import {
   IconSun,
   IconMoonStars,
@@ -22,20 +26,15 @@ import {
   IconTrash,
   IconBell,
   IconClipboard,
-} from "@tabler/icons-react";
-import { notifications } from "@mantine/notifications";
-import { LS_KEY } from "../lib/workout";
-import { ColorSwatch, SimpleGrid } from "@mantine/core";
-import { usePrimaryColor } from "../lib/usePrimaryColor";
-import { useMantineTheme } from "@mantine/core";
-
-import { Avatar } from "@mantine/core";
-import {
   IconBrandGoogle,
   IconLogout,
   IconCloudUp,
   IconCloudDown,
 } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
+import { LS_KEY } from "../lib/workout";
+import { usePrimaryColor } from "../lib/usePrimaryColor";
+
 import { cloudLoad, cloudSave } from "../lib/cloud";
 import type { PlanState } from "../types";
 import { db, onAuth, signInWithGoogle, signOutGoogle } from "../lib/firebase";
@@ -48,8 +47,9 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { useDisclosure } from "@mantine/hooks";
-import { useMediaQuery } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
+import { modalSafeProps } from "../lib/modalSafe";
+import { modals } from "@mantine/modals";
 
 export default function SettingsPage({
   state,
@@ -65,6 +65,7 @@ export default function SettingsPage({
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const fileRef = useRef<File | null>(null);
   const [size, setSize] = useState(() => roughStorageSize());
+  const [askOpen, { open: openAsk, close: closeAsk }] = useDisclosure(false);
 
   const [user, setUser] = useState<import("firebase/auth").User | null>(null);
   useEffect(() => onAuth(setUser), []);
@@ -72,7 +73,7 @@ export default function SettingsPage({
   const isPhone = useMediaQuery("(max-width: 480px)");
   const toggleScheme = () =>
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
-
+  const [signoutOpen, signout] = useDisclosure(false);
   const { t } = useTranslation();
 
   const saveCloud = async () => {
@@ -177,7 +178,6 @@ export default function SettingsPage({
     }
   };
 
-  // Только на этом устройстве
   const handleClearLocalPlan = () => {
     try {
       localStorage.removeItem(LS_KEY);
@@ -197,7 +197,6 @@ export default function SettingsPage({
     }
   };
 
-  // Везде: облако + это устройство
   const handleClearPlanEverywhere = async () => {
     if (!user) {
       notifications.show({
@@ -254,38 +253,66 @@ export default function SettingsPage({
 
   const handleSignOut = async () => {
     try {
-      // 1) Выходим из аккаунта (Auth storage очистится)
       await signOutGoogle();
     } finally {
       try {
-        // 2) Очищаем всё локальное состояние приложения
-        localStorage.clear(); // LS_KEY, i18nextLng, тема/цвет и т.д.
+        localStorage.clear();
       } catch {}
 
       try {
-        // 3) Чистим оффлайн-кэш Firestore (IndexedDB)
-        // Важно: сначала terminate, затем clearIndexedDbPersistence
         await terminate(db as any).catch(() => {});
         await clearIndexedDbPersistence(db as any).catch(() => {});
       } catch {}
 
       try {
-        // 4) Чистим PWA CacheStorage (если сервис-воркер кэшировал ответы)
         if ("caches" in window) {
           const names = await caches.keys();
           await Promise.all(names.map((n) => caches.delete(n)));
         }
       } catch {}
 
-      // 5) Полный сброс памяти приложения
       window.location.reload();
     }
   };
 
+  const hardSignOut = handleSignOut;
+
+  function openSignOutConfirm() {
+    modals.openConfirmModal({
+      centered: true,
+      title: t("settings.signOutConfirmTitle", {
+        defaultValue: "Выйти из аккаунта?",
+      }) as string,
+      children: (
+        <Text size="sm">
+          {t("settings.signOutConfirmText", {
+            defaultValue:
+              "Вы выйдете из аккаунта, а кэш и локальные данные на этом устройстве будут удалены.",
+          })}
+        </Text>
+      ),
+      labels: {
+        cancel: t("common.cancel") as string,
+        confirm: t("settings.signOut", { defaultValue: "Выйти" }) as string,
+      },
+      confirmProps: { color: "red" },
+      // чтобы фон перекрывал safe-areas в PWA
+      overlayProps: {
+        opacity: 0.55,
+        style: {
+          position: "fixed",
+          inset: 0,
+          height: "100dvh",
+          backdropFilter: "blur(2px)",
+        },
+      },
+      onConfirm: hardSignOut,
+    });
+  }
+
   function isMeaningfulPlan(obj: any): boolean {
     if (!obj || typeof obj !== "object") return false;
 
-    // Явные поля, где точно появляются «реальные» данные
     const candidates = [
       obj?.history,
       obj?.sessions,
@@ -299,7 +326,6 @@ export default function SettingsPage({
 
     if (candidates.some((a) => a.length > 0)) return true;
 
-    // Небольшой «глубокий» просмотр: если где-то в объекте есть непустой массив — считаем, что данные есть
     const stack: any[] = [obj];
     const seen = new Set<any>();
     while (stack.length) {
@@ -326,13 +352,11 @@ export default function SettingsPage({
       const t = raw.trim();
       if (!t || t === "{}" || t === "null" || t === "undefined") return false;
       const obj = JSON.parse(t);
-      return isMeaningfulPlan(obj); // <- ключевая проверка
+      return isMeaningfulPlan(obj);
     } catch {
       return false;
     }
   }
-
-  const [askOpen, { open: openAsk, close: closeAsk }] = useDisclosure(false);
 
   const proceedImport = async () => {
     closeAsk();
@@ -341,8 +365,8 @@ export default function SettingsPage({
 
   const proceedFresh = async () => {
     try {
-      localStorage.setItem(SKIP_IMPORT_FLAG, "1"); // чтобы useCloudSync не залил локальное
-      localStorage.removeItem(LS_KEY); // очистим локальный снапшот
+      localStorage.setItem(SKIP_IMPORT_FLAG, "1");
+      localStorage.removeItem(LS_KEY);
     } catch {}
     closeAsk();
     await signInWithGoogle();
@@ -363,7 +387,6 @@ export default function SettingsPage({
       </Title>
 
       <Stack gap="md">
-        {/* Тема */}
         <Card withBorder shadow="sm" radius="md">
           <Group justify="space-between" align="center">
             <Group>
@@ -384,7 +407,7 @@ export default function SettingsPage({
                 <Button
                   leftSection={<IconLogout size={16} />}
                   variant="default"
-                  onClick={handleSignOut}
+                  onClick={signout.open}
                 >
                   {t("settings.signOut")}
                 </Button>
@@ -471,7 +494,6 @@ export default function SettingsPage({
           </Group>
         </Card>
 
-        {/* Уведомления */}
         <Card withBorder shadow="sm" radius="md">
           <Group justify="space-between" align="center">
             <div>
@@ -489,7 +511,6 @@ export default function SettingsPage({
           </Group>
         </Card>
 
-        {/* Данные */}
         <Card withBorder shadow="sm" radius="md">
           <Text fw={600} mb="xs">
             {t("settings.data")}
@@ -541,13 +562,14 @@ export default function SettingsPage({
           <Divider my="sm" />
           <Group>
             <Text c="dimmed" size="sm">
-              {t("settings.storageSize")}
+              {t("settings.storageUsed")}
             </Text>
             <Badge variant="light">{size} КБ</Badge>
           </Group>
         </Card>
       </Stack>
       <Modal
+        {...modalSafeProps}
         opened={askOpen}
         onClose={closeAsk}
         centered
@@ -556,12 +578,14 @@ export default function SettingsPage({
         radius="md"
         zIndex={20000}
         title={t("settings.signInChoiceTitle")}
-        overlayProps={{ opacity: 0.45, blur: 2, zIndex: 19999 }}
+        overlayProps={{
+          ...modalSafeProps.overlayProps,
+          opacity: 0.45,
+          zIndex: 19999,
+        }}
         styles={{
-          body: {
-            paddingTop: 8,
-            paddingBottom: 8, // ← компактный низ без safe-area
-          },
+          ...modalSafeProps.styles,
+          body: { paddingTop: 8, paddingBottom: 8 },
         }}
       >
         <Stack gap="md" style={{ paddingBottom: 0, marginBottom: 0 }}>
@@ -569,7 +593,6 @@ export default function SettingsPage({
             {t("settings.signInChoiceDesc")}
           </Text>
 
-          {/* Desktop */}
           <Group visibleFrom="sm" justify="space-between" wrap="nowrap">
             <Button variant="default" onClick={closeAsk}>
               {t("settings.signInChoiceCancel")}
@@ -584,7 +607,6 @@ export default function SettingsPage({
             </Group>
           </Group>
 
-          {/* Mobile */}
           <Stack gap="xs" hiddenFrom="sm" style={{ marginBottom: 0 }}>
             <Button fullWidth onClick={proceedImport}>
               {t("settings.signInChoiceImport")}
@@ -596,6 +618,40 @@ export default function SettingsPage({
               {t("settings.signInChoiceCancel")}
             </Button>
           </Stack>
+        </Stack>
+      </Modal>
+      {/*Sign out modal*/}
+      <Modal
+        {...modalSafeProps}
+        opened={signoutOpen}
+        onClose={signout.close}
+        title={t("settings.signOutConfirmTitle")}
+        centered
+        overlayProps={{
+          ...modalSafeProps.overlayProps,
+          opacity: 0.55,
+        }}
+        styles={{
+          ...modalSafeProps.styles,
+          content: { padding: "var(--mantine-spacing-sm)" },
+        }}
+      >
+        <Stack gap="sm">
+          <Text size="sm">{t("settings.signOutConfirmText")}</Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={signout.close}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              color="red"
+              onClick={async () => {
+                signout.close();
+                await handleSignOut();
+              }}
+            >
+              {t("settings.signOut")}
+            </Button>
+          </Group>
         </Stack>
       </Modal>
     </>

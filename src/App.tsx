@@ -1,4 +1,3 @@
-// src/App.tsx
 import Layout from "./Layout";
 import { Container } from "@mantine/core";
 import { Routes, Route } from "react-router-dom";
@@ -34,12 +33,10 @@ export default function App() {
       }
   );
 
-  // локальная персистенция
   useEffect(() => {
     saveState(state);
   }, [state]);
 
-  // тик таймера
   useEffect(() => {
     if (!state.restRunning) return;
     const id = setInterval(
@@ -54,10 +51,8 @@ export default function App() {
     return () => clearInterval(id);
   }, [state.restRunning]);
 
-  // 🔗 синк данных
   useCloudSync(state, setState, true, 3000);
 
-  // 🎨 синк оформления
   usePrefsSync();
   useGoalAutoProgress(state);
 

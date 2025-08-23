@@ -1,6 +1,7 @@
-// src/features/goals/ui/SuggestedWorkoutModal.tsx
 import { Button, Group, List, Modal, Stack, Text, Title } from "@mantine/core";
-import type { Exercise, PlanState } from "../../../types";
+import type { Exercise } from "../../../types";
+import { t } from "i18next";
+import { modalSafeProps } from "../../../lib/modalSafe";
 
 export default function SuggestedWorkoutModal({
   opened,
@@ -18,9 +19,14 @@ export default function SuggestedWorkoutModal({
   applyReplace: () => void;
 }) {
   return (
-    <Modal opened={opened} onClose={onClose} title="Preview workout">
+    <Modal
+      {...modalSafeProps}
+      opened={opened}
+      onClose={onClose}
+      title={t("goals.preview")}
+    >
       <Stack>
-        <Title order={4}>Suggested for: {goalName}</Title>
+        <Title order={4}>{t("goals.suggestedFor", { name: goalName })}</Title>
         <List spacing="xs" withPadding>
           {suggested.map((e) => (
             <List.Item key={e.id}>
@@ -37,11 +43,11 @@ export default function SuggestedWorkoutModal({
         </List>
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
-          <Button onClick={applyAppend}>Add to plan</Button>
+          <Button onClick={applyAppend}>{t("goals.addToPlan")}</Button>
           <Button color="red" onClick={applyReplace}>
-            Replace plan
+            {t("goals.replacePlan")}
           </Button>
         </Group>
       </Stack>

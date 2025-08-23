@@ -158,9 +158,7 @@ export default function HistoryPage({ state }: { state: PlanState }) {
   return (
     <Stack>
       <Group justify="space-between" align="center">
-        <Title order={2}>
-          {t("history.title", { defaultValue: "История" })}
-        </Title>
+        <Title order={2}>{t("history.title")}</Title>
 
         <Group gap="sm" wrap="wrap">
           <SegmentedControl
@@ -169,19 +167,19 @@ export default function HistoryPage({ state }: { state: PlanState }) {
             onChange={(v) => setRange(v as Range)}
             data={[
               {
-                label: t("history.range.30d", { defaultValue: "30д" }),
+                label: t("history.range.30d"),
                 value: "30d",
               },
               {
-                label: t("history.range.90d", { defaultValue: "90д" }),
+                label: t("history.range.90d"),
                 value: "90d",
               },
               {
-                label: t("history.range.6m", { defaultValue: "6м" }),
+                label: t("history.range.6m"),
                 value: "6m",
               },
               {
-                label: t("history.range.all", { defaultValue: "Все" }),
+                label: t("history.range.all"),
                 value: "all",
               },
             ]}
@@ -193,15 +191,15 @@ export default function HistoryPage({ state }: { state: PlanState }) {
             onChange={(v) => setFilter(v as Filter)}
             data={[
               {
-                label: t("history.filter.all", { defaultValue: "Все" }),
+                label: t("history.filter.all"),
                 value: "all",
               },
               {
-                label: t("history.filter.goals", { defaultValue: "Целевые" }),
+                label: t("history.filter.goals"),
                 value: "goals",
               },
               {
-                label: t("history.filter.general", { defaultValue: "Обычные" }),
+                label: t("history.filter.general"),
                 value: "general",
               },
             ]}
@@ -211,18 +209,17 @@ export default function HistoryPage({ state }: { state: PlanState }) {
 
       <Group gap="lg">
         <Text size="sm" c="dimmed">
-          {t("history.filter." + filter, { defaultValue: filter })}
+          {t("history.filter." + filter)}
         </Text>
         <Text size="sm" c="dimmed">
-          {t("history.sessions", { defaultValue: "Sessions" })}: {stats.count}
+          {t("history.sessions")}: {stats.count}
         </Text>
         <Text size="sm" c="dimmed">
-          {t("history.volume", { defaultValue: "Volume" })}: {stats.volume}
+          {t("history.volume")}: {stats.volume}
         </Text>
         <Text size="sm" c="dimmed">
           {t("history.rpeAvg", {
             value: stats.rpeAvg ?? "—",
-            defaultValue: "Avg RPE: {{value}}",
           })}
         </Text>
       </Group>
@@ -273,7 +270,11 @@ export default function HistoryPage({ state }: { state: PlanState }) {
                               background: colVol,
                             }}
                           />
-                          <Text size="sm">Volume: {p.volume}</Text>
+                          <Text size="sm">
+                            {t("history.tooltip.volume", {
+                              value: p.volume,
+                            })}
+                          </Text>
                         </Group>
                         {typeof p.rpe === "number" && (
                           <Group gap={8}>
@@ -292,7 +293,6 @@ export default function HistoryPage({ state }: { state: PlanState }) {
                         {p.goalName && (
                           <Badge variant="light" mt={4}>
                             {t("history.badge.goal", {
-                              defaultValue: "Цель: {{name}}",
                               name: p.goalName,
                             })}
                           </Badge>

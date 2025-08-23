@@ -1,5 +1,5 @@
 // src/pages/ExercisesPage.tsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Badge,
   Button,
@@ -14,21 +14,26 @@ import {
   useMantineTheme,
   TextInput,
   NumberInput,
+  ActionIcon,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconAdjustments, IconPlus } from "@tabler/icons-react";
+import { IconAdjustments, IconPlus, IconTrash } from "@tabler/icons-react";
 import { Env, Muscle, PlanState, Exercise } from "../types";
 import { uid } from "../lib/workout";
 import { notifications } from "@mantine/notifications";
 
 import { useForm } from "@mantine/form";
 import { useCustomExercises } from "../hooks/useCustomExercises";
-import { addCustomExercise } from "../lib/customExercises";
+import {
+  addCustomExercise,
+  deleteCustomExercise,
+} from "../lib/customExercises";
 import { auth } from "../lib/firebase";
-import { ActionIcon, Tooltip } from "@mantine/core";
-import { IconTrash } from "@tabler/icons-react";
-import { deleteCustomExercise } from "../lib/customExercises"; // есть в нашем API
 import { useTranslation } from "react-i18next";
+import { modalSafeProps } from "../lib/modalSafe";
+import { onAuthStateChanged } from "firebase/auth";
+import { blockIfGuest } from "../lib/guard";
 
 const ENV_OPTS: { value: Env; label: string }[] = [
   { value: "outdoor", label: "Улица" },
@@ -163,7 +168,6 @@ export default function ExercisesPage({
   const theme = useMantineTheme();
   const primary = theme.primaryColor;
 
-  // текущие фильтры списка
   const [env, setEnv] = useState<Env>("outdoor");
   const [muscle, setMuscle] = useState<Muscle>("full");
   const { t } = useTranslation();
@@ -174,18 +178,16 @@ export default function ExercisesPage({
     setItems: setLocalCustoms,
   } = useCustomExercises();
 
-  // 2. Состояние: открыта ли модалка
   const [opened, setOpened] = useState(false);
 
-  // 3. Форма для добавления упражнения
   const form = useForm({
     initialValues: {
-      name: "", // название упражнения
-      env: "outdoor" as Env, // где выполняем
-      muscle: "legs" as Exclude<Muscle, "full">, // группа мышц (без "все тело")
-      sets: 3, // подходы
-      reps: 10, // повторы
-      notes: "", // заметки
+      name: "",
+      env: "outdoor" as Env,
+      muscle: "legs" as Exclude<Muscle, "full">,
+      sets: 3,
+      reps: 10,
+      notes: "",
     },
     validate: {
       name: (v) => (v.trim().length < 2 ? t("exercises.min2Chars") : null),
@@ -194,10 +196,8 @@ export default function ExercisesPage({
     },
   });
 
-  // объединённая библиотека: базовая + мои
   const allLib = useMemo(() => [...LIB, ...myCustoms], [myCustoms]);
 
-  // фильтрация для отображения
   const filtered = useMemo(
     () =>
       allLib.filter(
@@ -209,14 +209,18 @@ export default function ExercisesPage({
   const keyOf = (x: { env: Env; muscle: Muscle; name: string }) =>
     `${x.env}|${x.muscle}|${x.name}`;
   const customIndex = useMemo(() => {
-    // myCustoms приходит из useCustomExercises()
-    return new Map(myCustoms.map((c: any) => [keyOf(c), c])); // c.id будет у облачных
+    return new Map(myCustoms.map((c: any) => [keyOf(c), c]));
   }, [myCustoms]);
 
-  // модалка подбора фильтров
   const [pickOpen, pick] = useDisclosure(false);
   const [pickEnv, setPickEnv] = useState<Env>(env);
   const [pickMuscle, setPickMuscle] = useState<Muscle>(muscle);
+
+  const [authed, setAuthed] = useState(false);
+  useEffect(() => {
+    const off = onAuthStateChanged(auth, (u) => setAuthed(!!u));
+    return () => off();
+  });
 
   const applyPick = () => {
     setEnv(pickEnv);
@@ -238,7 +242,6 @@ export default function ExercisesPage({
     });
   };
 
-  // добавление в план
   const addExercise = (it: Partial<Exercise>) =>
     setState((s) => ({
       ...s,
@@ -289,35 +292,40 @@ export default function ExercisesPage({
   };
 
   async function createMyExercise(values: typeof form.values) {
+    if (!auth.currentUser) {
+      blockIfGuest(t("exercises.signInToCreate"));
+      return; // гостям нельзя создавать «свои»
+    }
+
     try {
-      if (auth.currentUser) {
-        // Залогинен → сохраняем в Firestore
-        await addCustomExercise({
-          name: values.name,
-          env: values.env,
-          muscle: values.muscle,
-          sets: values.sets,
-          reps: values.reps,
-          notes: values.notes,
-        } as any);
-      } else {
-        // Гость → временно в локалку (через хук)
-        setLocalCustoms((prev: any) => [...prev, values]);
-      }
+      await addCustomExercise({
+        name: values.name,
+        env: values.env,
+        muscle: values.muscle,
+        sets: values.sets,
+        reps: values.reps,
+        notes: values.notes,
+      } as any);
 
       setOpened(false);
       form.reset();
 
-      // Тост с CTA «Добавить в план»
       notifications.show({
-        title: "Добавлено в «Мои упражнения»",
+        title: t("exercises.addedToMineTitle", {
+          defaultValue: "Добавлено в «Мои упражнения»",
+        }),
         message: (
           <Group gap="xs" wrap="wrap">
-            <Text>«{values.name}» сохранено. Добавить в план?</Text>
+            <Text>
+              «{values.name}» сохранено.{" "}
+              {t("exercises.addToPlanQuestion", {
+                defaultValue: "Добавить в план?",
+              })}
+            </Text>
             <Button
               size="xs"
               variant="light"
-              onClick={() => {
+              onClick={() =>
                 addExercise({
                   name: values.name,
                   sets: values.sets,
@@ -325,8 +333,8 @@ export default function ExercisesPage({
                   env: values.env,
                   muscle: values.muscle,
                   notes: values.notes,
-                });
-              }}
+                })
+              }
             >
               {t("exercises.addToPlan")}
             </Button>
@@ -424,7 +432,7 @@ export default function ExercisesPage({
             leftSection={<IconPlus size={16} />}
             variant="filled"
             onClick={() => {
-              // инициализируем форму текущими фильтрами
+              if (!authed) return blockIfGuest(t("auth.signInToCreate"));
               form.setValues({
                 name: "",
                 env,
@@ -441,6 +449,14 @@ export default function ExercisesPage({
             w={{ base: "100%", sm: "auto" }}
             h={36}
             mt={{ base: 4, sm: 24 }}
+            aria-disabled={!authed}
+            styles={{
+              root: {
+                opacity: authed ? 1 : 0.45,
+                cursor: authed ? "pointer" : "not-allowed",
+                pointerEvents: "auto",
+              },
+            }}
           >
             {t("exercises.addCustom")}
           </Button>
@@ -471,7 +487,6 @@ export default function ExercisesPage({
                 {it.sets}×{it.reps}
               </Text>
 
-              {/* ← корзина только если это пользовательское упражнение */}
               {customIndex.has(keyOf(it)) && (
                 <Tooltip label={t("exercises.deleteFromMine")} withArrow>
                   <ActionIcon
@@ -518,8 +533,8 @@ export default function ExercisesPage({
         ))}
       </Card>
 
-      {/* Модалка подбора */}
       <Modal
+        {...modalSafeProps}
         opened={pickOpen}
         onClose={pick.close}
         title={t("exercises.modalPickTitle")}
@@ -547,6 +562,7 @@ export default function ExercisesPage({
         </Stack>
       </Modal>
       <Modal
+        {...modalSafeProps}
         opened={opened}
         onClose={() => setOpened(false)}
         title={t("exercises.modalCustomTitle")}

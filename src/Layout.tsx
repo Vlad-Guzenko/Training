@@ -32,6 +32,7 @@ import { usePrefsSync } from "./lib/usePrefsSync";
 import { onAuthStateChanged } from "firebase/auth";
 import { notifications } from "@mantine/notifications";
 import { auth } from "./lib/firebase";
+import { blockIfGuest } from "./lib/guard";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { t, i18n } = useTranslation(); // подписка на смену языка
@@ -92,15 +93,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const [authed, setAuthed] = useState(false);
   useEffect(() => onAuthStateChanged(auth, (u) => setAuthed(!!u)), []);
-
-  const blockIfGuest = () =>
-    notifications.show({
-      title: t("auth.signInRequired", { defaultValue: "Требуется вход" }),
-      message: t("auth.pleaseSignIn", {
-        defaultValue: "Войдите, чтобы использовать цели.",
-      }),
-      color: "yellow",
-    });
 
   const HEADER_H = 56;
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
@@ -199,12 +191,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             />
           ) : (
             <NavLink
+              component={RouterLink}
+              to="/goals"
               label={t("goals.title")}
               leftSection={<IconTarget size={18} />}
-              onClick={blockIfGuest}
-              aria-disabled
+              onClick={(e) => {
+                if (!authed) {
+                  e.preventDefault();
+                  blockIfGuest(t("auth.pleaseSignInToManage"));
+                }
+              }}
+              aria-disabled={!authed}
               styles={{
-                root: { opacity: 0.45, cursor: "not-allowed" },
+                root: {
+                  opacity: authed ? 1 : 0.45,
+                  cursor: authed ? "pointer" : "not-allowed",
+                },
               }}
             />
           )}

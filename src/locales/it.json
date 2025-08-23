@@ -84,7 +84,7 @@
     "import": "Importa JSON",
     "clear": "Cancella dati",
     "copyClipboard": "Copia negli appunti",
-    "storageSize": "Dimensione archiviazione:",
+    "storageUsed": "Spazio utilizzato:",
     "saved": "Salvato",
     "updatedCloud": "Dati salvati nel cloud",
     "error": "Errore",
@@ -120,12 +120,15 @@
     "resetPlanEverywhere": "Reimposta ovunque (cloud + dispositivo)",
     "stateClearedEverywhere": "Piano reimpostato in locale e nel cloud",
     "clearFailCloud": "Impossibile reimpostare i dati nel cloud",
+    "signInToClearCloud": "Accedi per cancellare i tuoi dati cloud",
     "signInChoiceTitle": "Accesso all'account",
     "signInChoiceDesc": "Sono stati trovati dati locali su questo dispositivo. Cosa fare all'accesso?",
     "signInChoiceImport": "Importa i dati locali nel cloud",
     "signInChoiceFresh": "Iniziare da zero",
     "signInChoiceCancel": "Annulla",
-    "signInImportConfirm": "Importare i dati locali nel cloud durante l'accesso?"
+    "signInImportConfirm": "Importare i dati locali nel cloud durante l'accesso?",
+    "signOutConfirmTitle": "Uscire dall'account?",
+    "signOutConfirmText": "Verrai disconnesso e la cache e i dati locali su questo dispositivo verranno eliminati."
   },
   "history": {
     "title": "Cronologia",
@@ -145,6 +148,9 @@
     },
     "badge": {
       "goal": "Obiettivo: {{name}}"
+    },
+    "tooltip": {
+      "volume": "Volume: {{value}}"
     },
     "volume": "Volume",
     "progress": "Progressi in volume",
@@ -174,6 +180,7 @@
     "replacePlan": "Sostituisci piano",
     "active": "Attivo",
     "makeActive": "Imposta come attivo",
+    "deleteTitle": "Eliminare l'obiettivo?",
     "confirmDelete": "Eliminare l'obiettivo «{{name}}»? L'operazione è irreversibile.",
     "domain": {
       "strength": "Forza",
@@ -219,6 +226,9 @@
     "swReady": "✅ L'app è pronta per l'offline."
   },
   "auth": {
+    "signInRequired": "Accesso richiesto",
+    "pleaseSignInToManage": "Accedi per gestire gli obiettivi",
+    "signInToCreate": "Accedi, per creare esercizi",
     "signInFailedTitle": "Accesso non riuscito",
     "signInRedirectTryTitle": "Provo accesso alternativo",
     "signInRedirectTryMsg": "Reindirizzamento tramite Google…",

@@ -84,7 +84,7 @@
     "import": "Импорт JSON",
     "clear": "Очистить данные",
     "copyClipboard": "Копировать в буфер",
-    "storageSize": "Объём хранилища:",
+    "storageUsed": "Занято хранилища:",
     "saved": "Сохранено",
     "updatedCloud": "Данные обновлены в облаке",
     "error": "Ошибка",
@@ -126,7 +126,9 @@
     "signInChoiceImport": "Импортировать локальные в облако",
     "signInChoiceFresh": "Начать с нуля",
     "signInChoiceCancel": "Отмена",
-    "signInImportConfirm": "Подтянуть текущие локальные данные в облако при входе?"
+    "signInImportConfirm": "Подтянуть текущие локальные данные в облако при входе?",
+    "signOutConfirmTitle": "Выйти из аккаунта?",
+    "signOutConfirmText": "Вы выйдете из аккаунта, а кэш и локальные данные на этом устройстве будут удалены."
   },
   "history": {
     "title": "История",
@@ -146,6 +148,9 @@
     },
     "badge": {
       "goal": "Цель: {{name}}"
+    },
+    "tooltip": {
+      "volume": "Объём: {{value}}"
     },
     "volume": "Объём",
     "progress": "Прогресс по объёму",
@@ -175,6 +180,7 @@
     "replacePlan": "Заменить план",
     "active": "Активна",
     "makeActive": "Сделать активной",
+    "deleteTitle": "Удалить цель?",
     "confirmDelete": "Удалить цель «{{name}}»? Действие необратимо.",
     "domain": {
       "strength": "Сила",
@@ -220,6 +226,9 @@
     "swReady": "✅ Приложение готово к офлайн-работе."
   },
   "auth": {
+    "signInRequired": "Требуется вход",
+    "pleaseSignInToManage": "Войдите, чтобы управлять целями",
+    "signInToCreate": "Войдите, чтобы создавать упражнения",
     "signInFailedTitle": "Вход не удался",
     "signInRedirectTryTitle": "Пробую альтернативный вход",
     "signInRedirectTryMsg": "Перенаправление через Google…",

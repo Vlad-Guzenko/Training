@@ -13,6 +13,7 @@ import { usePrimaryColor } from "./lib/usePrimaryColor";
 
 import { registerSW } from "virtual:pwa-register";
 import "./lib/i18n";
+import { useMediaQuery } from "@mantine/hooks";
 
 registerSW({
   immediate: true,
@@ -25,12 +26,31 @@ registerSW({
 });
 
 function Root() {
-  // Акцентный цвет на верхнем уровне темы
   const [primary] = usePrimaryColor();
+  const isPhone = useMediaQuery("(max-width: 600px)"); // или 640px — на вкус
 
   return (
     <MantineProvider theme={{ primaryColor: primary }}>
-      <Notifications position="top-right" zIndex={9999} />
+      <Notifications
+        withinPortal
+        zIndex={4000}
+        limit={3}
+        position="top-right"
+        containerWidth={isPhone ? undefined : 420}
+        style={{
+          top: "calc(env(safe-area-inset-top, 0px) + 56px + 8px)", // 56 — твоя высота хедера
+          right: isPhone ? 8 : 12,
+          left: isPhone ? 8 : "auto",
+          width: isPhone ? "calc(100vw - 16px)" : undefined,
+        }}
+        styles={(theme) => ({
+          notification: {
+            borderRadius: 12,
+            boxShadow: theme.shadows.md,
+          },
+          title: { fontWeight: 600 },
+        })}
+      />
       <HashRouter>
         <App />
       </HashRouter>

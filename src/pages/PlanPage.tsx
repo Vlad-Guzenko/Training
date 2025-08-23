@@ -52,12 +52,10 @@ import {
   volumeOf,
   clamp,
 } from "../lib/workout";
-import { markLocalUpdated } from "../lib/useCloudSync";
 import { addSession, ensureDefaultWorkout } from "../lib/cloudNormalized";
 import { t } from "i18next";
 import { useTranslation } from "react-i18next";
 
-/* ---------- компактный счётчик – / + ---------- */
 function StatControl({
   label,
   value,
@@ -121,7 +119,6 @@ function StatControl({
   );
 }
 
-/* ---------- карточка упражнения (единый PWA-стиль для всех экранов) ---------- */
 function SortableExercise({
   ex,
   idx,
@@ -159,7 +156,6 @@ function SortableExercise({
         zIndex: isDragging ? 2 : 1,
       }}
     >
-      {/* верх: номер + название + ручка DnD справа */}
       <Group justify="space-between" align="center" wrap="nowrap" mb={8}>
         <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
           <Badge variant="light" size="sm" radius="sm" miw={22} ta="center">
@@ -199,7 +195,6 @@ function SortableExercise({
         </ActionIcon>
       </Group>
 
-      {/* средняя строка: два счётчика */}
       <Group
         gap="sm"
         wrap="nowrap"
@@ -224,7 +219,6 @@ function SortableExercise({
         <div style={{ flex: 1 }} />
       </Group>
 
-      {/* нижняя строка: Заметки слева (с индикатором) + Корзина справа */}
       <Group justify="space-between" mb={notesOpen ? 8 : 0}>
         <Group gap="xs" align="center">
           <Button
@@ -270,7 +264,6 @@ function SortableExercise({
   );
 }
 
-/* ---------------------------- Страница ---------------------------- */
 export default function PlanPage({
   state,
   setState,
@@ -283,8 +276,15 @@ export default function PlanPage({
     [state.exercises]
   );
 
-  const isSmall = useMediaQuery("(max-width: 48em)"); // ~768px
-  const isDesktop = useMediaQuery("(min-width: 62em)"); // для модификаторов DnD
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 120, tolerance: 6 },
+    })
+  );
+
+  const isSmall = useMediaQuery("(max-width: 48em)");
+  const isDesktop = useMediaQuery("(min-width: 62em)");
   const { t } = useTranslation();
 
   const bumpSession = (d: number) =>
@@ -314,15 +314,6 @@ export default function PlanPage({
       exercises: s.exercises.filter((e) => e.id !== id),
     }));
 
-  const moveExercise = (idx: number, dir: -1 | 1) =>
-    setState((s) => {
-      const arr = [...s.exercises];
-      const j = idx + dir;
-      if (j < 0 || j >= arr.length) return s;
-      [arr[idx], arr[j]] = [arr[j], arr[idx]];
-      return { ...s, exercises: arr };
-    });
-
   function adaptProgressByRpe(rpe: number) {
     if (rpe <= 6) return state.progressPct + 3;
     if (rpe <= 8) return state.progressPct;
@@ -336,8 +327,8 @@ export default function PlanPage({
       date: new Date().toISOString(),
       volume: state.exercises.reduce((sum, e) => sum + e.sets * e.reps, 0),
       rpe: state.rpeToday,
-      goalId: state.activeGoalId, // ⬅️ привязка к цели
-      goalName: state.activeGoalName, // ⬅️
+      goalId: state.activeGoalId,
+      goalName: state.activeGoalName,
     };
 
     const nextPct = adaptProgressByRpe(state.rpeToday);
@@ -349,14 +340,12 @@ export default function PlanPage({
       progressPct: nextPct,
       exercises: s.exercises.map((e) => ({
         ...e,
-        // твоя логика сброса/прогрессии — оставь как есть
       })),
-      activeGoalId: undefined, // ⬅️ выходим из "режима цели"
-      activeGoalName: undefined, // ⬅️
+      activeGoalId: undefined,
+      activeGoalName: undefined,
       lastActionAt: new Date().toISOString(),
     }));
 
-    // если у тебя есть сохранение в облако — тоже можно передать goalId/name в payload
     try {
       const wid = await ensureDefaultWorkout();
       await addSession(wid, {
@@ -369,7 +358,7 @@ export default function PlanPage({
           name: e.name ?? "",
           sets: e.sets ?? 0,
           reps: e.reps ?? 0,
-          notes: e.notes ?? null, // теперь OK: тип CloudSessionExercise
+          notes: e.notes ?? null,
         })),
         goalId: state.activeGoalId ?? null,
         goalName: state.activeGoalName ?? null,
@@ -408,17 +397,6 @@ export default function PlanPage({
       ],
     }));
 
-  const exportTxt = () => {
-    const text = buildPlanText(state, totalVolume);
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `workout-plan-session-${state.sessionNumber}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const copyToday = async () => {
     const ok = await safeCopyText(
       buildPlanText(state, totalVolume),
@@ -427,13 +405,6 @@ export default function PlanPage({
     alert(ok ? t("plan.planCopied") : t("plan.clipboardFallback"));
   };
 
-  // DnD: Pointer + Touch (для PWA). На мобиле ограничиваем ось Y, на ПК без ограничений.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 120, tolerance: 6 },
-    })
-  );
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -528,13 +499,13 @@ export default function PlanPage({
           >
             {t("plan.skip")}
           </Button>
-          <Button
+          {/* <Button
             variant="subtle"
             leftSection={<IconCopy size={16} />}
             onClick={copyToday}
           >
             {t("plan.copyPlan")}
-          </Button>
+          </Button> */}
           <Button variant="light" onClick={() => addExercise()}>
             {t("plan.addExercise")}
           </Button>
@@ -555,7 +526,6 @@ export default function PlanPage({
             items={state.exercises.map((e) => e.id)}
             strategy={rectSortingStrategy}
           >
-            {/* 2 карточки в ряд на десктопе, 1 на мобиле. Внутри — PWA-верстка */}
             <Grid gutter="md" align="stretch">
               {state.exercises.length === 0 && (
                 <Grid.Col span={12}>

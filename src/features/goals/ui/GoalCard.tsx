@@ -18,6 +18,7 @@ import { IconTrash } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import GoalEtaRing from "./GoalEtaRing";
 import type { Goal } from "../domain/types";
+import { modalSafeProps } from "../../../lib/modalSafe";
 
 type Props = {
   goal: Goal;
@@ -39,7 +40,6 @@ export default function GoalCard({
   const { colorScheme } = useMantineColorScheme();
   const isDark = colorScheme === "dark";
 
-  // локальная модалка подтверждения удаления
   const [delOpen, setDelOpen] = useState(false);
   const openDel = (e?: React.MouseEvent) => {
     e?.stopPropagation?.();
@@ -184,24 +184,24 @@ export default function GoalCard({
 
       {/* LOCAL CONFIRM MODAL */}
       <Modal
+        {...modalSafeProps}
         opened={delOpen}
         onClose={closeDel}
         centered
-        title={t("goals.deleteTitle", { defaultValue: "Удалить цель?" })}
+        title={t("goals.deleteTitle")}
       >
         <Text size="sm">
           {t("goals.confirmDelete", {
             name: g.name,
-            defaultValue: `Удалить цель «${g.name}»? Это действие необратимо.`,
           })}
         </Text>
 
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={closeDel}>
-            {t("common.cancel", { defaultValue: "Отмена" })}
+            {t("common.cancel")}
           </Button>
           <Button color="red" onClick={confirmDel}>
-            {t("common.delete", { defaultValue: "Удалить" })}
+            {t("common.delete")}
           </Button>
         </Group>
       </Modal>

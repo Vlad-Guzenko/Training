@@ -84,7 +84,7 @@
     "import": "Import JSON",
     "clear": "Clear data",
     "copyClipboard": "Copy to clipboard",
-    "storageSize": "Storage size:",
+    "storageUsed": "Storage used:",
     "saved": "Saved",
     "updatedCloud": "Data updated in cloud",
     "error": "Error",
@@ -120,12 +120,15 @@
     "resetPlanEverywhere": "Reset everywhere (cloud + device)",
     "stateClearedEverywhere": "Plan reset locally and in the cloud",
     "clearFailCloud": "Failed to reset data in the cloud",
+    "signInToClearCloud": "Sign in to clear your cloud data",
     "signInChoiceTitle": "Sign in",
     "signInChoiceDesc": "We found local data on this device. What would you like to do when signing in?",
     "signInChoiceImport": "Import local data to cloud",
     "signInChoiceFresh": "Start from scratch",
     "signInChoiceCancel": "Cancel",
-    "signInImportConfirm": "Import the current local data to the cloud when signing in?"
+    "signInImportConfirm": "Import the current local data to the cloud when signing in?",
+    "signOutConfirmTitle": "Sign out?",
+    "signOutConfirmText": "You’ll be signed out, and the cache and local data on this device will be deleted."
   },
   "history": {
     "title": "History",
@@ -145,6 +148,9 @@
     },
     "badge": {
       "goal": "Goal: {{name}}"
+    },
+    "tooltip": {
+      "volume": "Volume: {{value}}"
     },
     "volume": "Volume",
     "progress": "Progress in volume",
@@ -174,6 +180,7 @@
     "replacePlan": "Replace plan",
     "active": "Active",
     "makeActive": "Set as active",
+    "deleteTitle": "Delete goal?",
     "confirmDelete": "Delete goal “{{name}}”? This cannot be undone.",
     "domain": {
       "strength": "Strength",
@@ -219,6 +226,9 @@
     "swReady": "✅ App is ready for offline work."
   },
   "auth": {
+    "signInRequired": "Sign in required",
+    "pleaseSignInToManage": "Log in to manage your goals",
+    "signInToCreate": "Login to create exercises",
     "signInFailedTitle": "Sign-in failed",
     "signInRedirectTryTitle": "Trying alternative sign-in",
     "signInRedirectTryMsg": "Redirecting via Google…",
