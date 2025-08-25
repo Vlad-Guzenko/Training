@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import {
-  getActiveGoal,
-  setActiveGoal,
-  subscribeGoals,
-  deleteGoal,
-} from "../api/repo";
+import { getActiveGoal, setActiveGoal, subscribeGoals, deleteGoal } from "../api/repo";
 import type { Goal } from "../domain/types";
 import NewGoalModal from "./NewGoalModal";
 import SuggestedWorkoutModal from "./SuggestedWorkoutModal";
@@ -16,23 +11,9 @@ import type { PlanState, Exercise } from "../../../types";
 import { auth } from "../../../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import GoalCard from "./GoalCard";
-import {
-  Button,
-  Card,
-  Group,
-  SimpleGrid,
-  Stack,
-  Title,
-  Text,
-} from "@mantine/core";
+import { Button, Card, Group, SimpleGrid, Stack, Title, Text } from "@mantine/core";
 
-export default function GoalsPage({
-  state,
-  setState,
-}: {
-  state: PlanState;
-  setState: React.Dispatch<React.SetStateAction<PlanState>>;
-}) {
+export default function GoalsPage({ state, setState }: { state: PlanState; setState: React.Dispatch<React.SetStateAction<PlanState>> }) {
   const { t } = useTranslation();
 
   const [openedNew, { open: openNew, close: closeNew }] = useDisclosure(false);
@@ -141,26 +122,18 @@ export default function GoalsPage({
       <Group justify="space-between" wrap="nowrap">
         <Title order={2}>{t("goals.title")}</Title>
         {authed && (
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={openNew}
-            visibleFrom="sm"
-          >
+          <Button leftSection={<IconPlus size={16} />} onClick={openNew} visibleFrom="sm">
             {t("goals.new")}
           </Button>
         )}
       </Group>
-      {!authed && (
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={openNew}
-          fullWidth
-        >
+      {authed && (
+        <Button leftSection={<IconPlus size={16} />} onClick={openNew} fullWidth>
           {t("goals.new")}
         </Button>
       )}
 
-      {authed ? (
+      {!authed ? (
         <Card withBorder radius="lg" p="lg">
           <Text c="dimmed" size="sm">
             {t("auth.pleaseSignIn")}
@@ -168,10 +141,7 @@ export default function GoalsPage({
         </Card>
       ) : (
         <>
-          <SimpleGrid
-            cols={{ base: 1, sm: 2, lg: 3 }}
-            spacing={{ base: "md", sm: "lg" }}
-          >
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing={{ base: "md", sm: "lg" }}>
             {items.map((g) => (
               <GoalCard
                 key={g.id}
