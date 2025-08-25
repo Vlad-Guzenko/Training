@@ -399,3 +399,16 @@ html.ios-pwa body {
   z-index: 5999; /* ниже самого хедера, выше контента */
   pointer-events: none; /* не перехватывает тапы/скролл */
 }
+
+/* Гарантируем, что корень приложения не ниже экрана */
+html, body, #root {
+  min-height: 100svh;
+  background: var(--mantine-color-body);
+}
+
+/* Фолбэк для старых Safari / iOS */
+@supports not (height: 100svh) {
+  html, body, #root {
+    min-height: -webkit-fill-available;
+  }
+}
