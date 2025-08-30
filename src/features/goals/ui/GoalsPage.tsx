@@ -121,14 +121,16 @@ export default function GoalsPage({ state, setState }: { state: PlanState; setSt
     <Stack className="goals-page">
       <Group justify="space-between" wrap="nowrap">
         <Title order={2}>{t("goals.title")}</Title>
+
         {authed && (
           <Button leftSection={<IconPlus size={16} />} onClick={openNew} visibleFrom="sm">
             {t("goals.new")}
           </Button>
         )}
       </Group>
+
       {authed && (
-        <Button leftSection={<IconPlus size={16} />} onClick={openNew} fullWidth>
+        <Button leftSection={<IconPlus size={16} />} onClick={openNew} fullWidth hiddenFrom="sm">
           {t("goals.new")}
         </Button>
       )}
